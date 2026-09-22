@@ -29,10 +29,14 @@ public class InventoryService {
 
     @Transactional
     public InventoryTransactionResponse recordSale(
+            Long storeId,
             Long productId,
             InventoryChangeRequest request) {
 
-        Product product = findActiveProduct(productId);
+        Product product = findActiveProduct(
+                storeId,
+                productId
+        );
 
         int quantityBefore = product.getQuantity();
 
@@ -46,7 +50,8 @@ public class InventoryService {
                 product.getQuantity(),
                 InventoryMovementSource.MANUAL,
                 request.note(),
-                null);
+                null
+        );
 
         productRepository.save(product);
 
@@ -55,15 +60,20 @@ public class InventoryService {
 
         return new InventoryTransactionResponse(
                 ProductResponse.from(product),
-                InventoryMovementResponse.from(savedMovement));
+                InventoryMovementResponse.from(savedMovement)
+        );
     }
 
     @Transactional
     public InventoryTransactionResponse recordRestock(
+            Long storeId,
             Long productId,
             InventoryChangeRequest request) {
 
-        Product product = findActiveProduct(productId);
+        Product product = findActiveProduct(
+                storeId,
+                productId
+        );
 
         int quantityBefore = product.getQuantity();
 
@@ -77,7 +87,8 @@ public class InventoryService {
                 product.getQuantity(),
                 InventoryMovementSource.MANUAL,
                 request.note(),
-                null);
+                null
+        );
 
         productRepository.save(product);
 
@@ -86,28 +97,39 @@ public class InventoryService {
 
         return new InventoryTransactionResponse(
                 ProductResponse.from(product),
-                InventoryMovementResponse.from(savedMovement));
+                InventoryMovementResponse.from(savedMovement)
+        );
     }
 
     @Transactional(readOnly = true)
     public List<InventoryMovementResponse> getMovementHistory(
+            Long storeId,
             Long productId) {
 
-        findActiveProduct(productId);
+        findActiveProduct(storeId, productId);
 
         return movementRepository
-                .findAllByProduct_IdOrderByCreatedAtDesc(productId)
+                .findAllByProduct_Store_IdAndProduct_IdOrderByCreatedAtDesc(
+                        storeId,
+                        productId
+                )
                 .stream()
                 .map(InventoryMovementResponse::from)
                 .toList();
     }
 
-    private Product findActiveProduct(Long productId) {
-        return productRepository.findById(productId)
+    private Product findActiveProduct(
+            Long storeId,
+            Long productId) {
+
+        return productRepository
+                .findByStoreIdAndId(storeId, productId)
                 .filter(Product::isActive)
                 .orElseThrow(() -> new ProductNotFoundException(
                         "Product with ID "
                                 + productId
-                                + " was not found"));
+                                + " was not found in store "
+                                + storeId
+                ));
     }
 }
