@@ -2,14 +2,20 @@ package com.aieyaan.splynt.product;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Objects;
+
+import com.aieyaan.splynt.tenant.Store;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -21,6 +27,10 @@ public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    private Store store;
 
     @Column(nullable = false, unique = true, length = 64)
     private String barcode;
@@ -85,7 +95,43 @@ public class Product {
         this.reorderLevel = reorderLevel;
         this.targetStock = targetStock;
         this.unitCost = unitCost;
-        this.source = source == null ? ProductSource.MANUAL : source;
+        this.source = source == null
+                ? ProductSource.MANUAL
+                : source;
+    }
+
+    public Product(
+            Store store,
+            String barcode,
+            String name,
+            String brand,
+            String category,
+            int quantity,
+            int reorderLevel,
+            int targetStock,
+            BigDecimal unitCost,
+            ProductSource source) {
+
+        this(
+                barcode,
+                name,
+                brand,
+                category,
+                quantity,
+                reorderLevel,
+                targetStock,
+                unitCost,
+                source
+        );
+
+        assignToStore(store);
+    }
+
+    public void assignToStore(Store store) {
+        this.store = Objects.requireNonNull(
+                store,
+                "Store is required"
+        );
     }
 
     @PrePersist
@@ -115,12 +161,14 @@ public class Product {
     public void recordSale(int amount) {
         if (amount <= 0) {
             throw new IllegalArgumentException(
-                    "Sale quantity must be greater than zero");
+                    "Sale quantity must be greater than zero"
+            );
         }
 
         if (amount > quantity) {
             throw new IllegalArgumentException(
-                    "Sale quantity cannot exceed available inventory");
+                    "Sale quantity cannot exceed available inventory"
+            );
         }
 
         quantity -= amount;
@@ -129,7 +177,8 @@ public class Product {
     public void restock(int amount) {
         if (amount <= 0) {
             throw new IllegalArgumentException(
-                    "Restock quantity must be greater than zero");
+                    "Restock quantity must be greater than zero"
+            );
         }
 
         quantity += amount;
@@ -137,6 +186,14 @@ public class Product {
 
     public Long getId() {
         return id;
+    }
+
+    public Store getStore() {
+        return store;
+    }
+
+    public Long getStoreId() {
+        return store == null ? null : store.getId();
     }
 
     public String getBarcode() {
