@@ -10,60 +10,62 @@ import org.springframework.data.repository.query.Param;
 public interface ProductRepository
         extends JpaRepository<Product, Long> {
 
-    /*
-     * Temporary legacy methods.
-     *
-     * Existing services and tests currently use these methods.
-     * We will remove them after converting the complete application
-     * to store-scoped operations.
-     */
-
-    Optional<Product> findByBarcode(String barcode);
-
-    Optional<Product> findByCloverItemId(String cloverItemId);
-
-    boolean existsByBarcode(String barcode);
-
-    List<Product> findAllByActiveTrueOrderByNameAsc();
+    @Query("""
+            SELECT p
+            FROM Product p
+            WHERE p.store.id = :storeId
+              AND p.id = :productId
+            """)
+    Optional<Product> findByStoreIdAndId(
+            @Param("storeId") Long storeId,
+            @Param("productId") Long productId
+    );
 
     @Query("""
             SELECT p
             FROM Product p
-            WHERE p.active = true
-              AND p.quantity <= p.reorderLevel
-            ORDER BY p.quantity ASC, p.name ASC
+            WHERE p.store.id = :storeId
+              AND p.barcode = :barcode
             """)
-    List<Product> findLowStockProducts();
-
-    /*
-     * SaaS store-scoped methods.
-     *
-     * These methods prevent one store from accidentally retrieving
-     * another store's inventory.
-     */
-
-    Optional<Product> findByStoreIdAndId(
-            Long storeId,
-            Long productId
-    );
-
     Optional<Product> findByStoreIdAndBarcode(
-            Long storeId,
-            String barcode
+            @Param("storeId") Long storeId,
+            @Param("barcode") String barcode
     );
 
+    @Query("""
+            SELECT p
+            FROM Product p
+            WHERE p.store.id = :storeId
+              AND p.cloverItemId = :cloverItemId
+            """)
     Optional<Product> findByStoreIdAndCloverItemId(
-            Long storeId,
-            String cloverItemId
+            @Param("storeId") Long storeId,
+            @Param("cloverItemId") String cloverItemId
     );
 
+    @Query("""
+            SELECT CASE
+                WHEN COUNT(p) > 0 THEN true
+                ELSE false
+            END
+            FROM Product p
+            WHERE p.store.id = :storeId
+              AND p.barcode = :barcode
+            """)
     boolean existsByStoreIdAndBarcode(
-            Long storeId,
-            String barcode
+            @Param("storeId") Long storeId,
+            @Param("barcode") String barcode
     );
 
+    @Query("""
+            SELECT p
+            FROM Product p
+            WHERE p.store.id = :storeId
+              AND p.active = true
+            ORDER BY p.name ASC
+            """)
     List<Product> findAllByStoreIdAndActiveTrueOrderByNameAsc(
-            Long storeId
+            @Param("storeId") Long storeId
     );
 
     @Query("""

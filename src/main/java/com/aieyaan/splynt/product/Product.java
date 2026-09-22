@@ -19,20 +19,45 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "products")
+@Table(
+        name = "products",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uq_products_store_barcode",
+                        columnNames = {"store_id", "barcode"}
+                ),
+                @UniqueConstraint(
+                        name = "uq_products_store_clover_item",
+                        columnNames = {
+                                "store_id",
+                                "clover_item_id"
+                        }
+                )
+        }
+)
 public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "store_id")
+    @ManyToOne(
+            fetch = FetchType.LAZY,
+            optional = false
+    )
+    @JoinColumn(
+            name = "store_id",
+            nullable = false
+    )
     private Store store;
 
-    @Column(nullable = false, unique = true, length = 64)
+    @Column(
+            nullable = false,
+            length = 64
+    )
     private String barcode;
 
     @Column(nullable = false, length = 150)
@@ -53,10 +78,17 @@ public class Product {
     @Column(name = "target_stock", nullable = false)
     private int targetStock;
 
-    @Column(name = "unit_cost", precision = 12, scale = 2)
+    @Column(
+            name = "unit_cost",
+            precision = 12,
+            scale = 2
+    )
     private BigDecimal unitCost;
 
-    @Column(name = "clover_item_id", unique = true, length = 64)
+    @Column(
+            name = "clover_item_id",
+            length = 64
+    )
     private String cloverItemId;
 
     @Enumerated(EnumType.STRING)
@@ -76,6 +108,10 @@ public class Product {
         // JPA requires a no-argument constructor.
     }
 
+    /*
+     * Retained temporarily for isolated domain unit tests.
+     * Persisted products must use the store-aware constructor.
+     */
     public Product(
             String barcode,
             String name,
