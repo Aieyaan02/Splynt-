@@ -1,6 +1,7 @@
 package com.aieyaan.splynt.product;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -23,6 +24,7 @@ import com.aieyaan.splynt.common.error.GlobalExceptionHandler;
 import com.aieyaan.splynt.product.dto.CreateProductRequest;
 import com.aieyaan.splynt.product.dto.ProductResponse;
 import com.aieyaan.splynt.product.exception.ProductNotFoundException;
+import com.aieyaan.splynt.tenant.exception.StoreNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,27 +39,37 @@ class ProductControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new ProductController(productService))
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .standaloneSetup(
+                        new ProductController(productService)
+                )
+                .setControllerAdvice(
+                        new GlobalExceptionHandler()
+                )
                 .build();
 
-        objectMapper = new ObjectMapper().findAndRegisterModules();
+        objectMapper =
+                new ObjectMapper().findAndRegisterModules();
     }
 
     @Test
-    void createsProductAndReturnsCreatedStatus() throws Exception {
-        CreateProductRequest request = new CreateProductRequest(
-                "123456789012",
-                "Orange Juice",
-                "Example Brand",
-                "Beverages",
-                10,
-                5,
-                20,
-                new BigDecimal("2.50"));
+    void createsProductForStoreAndReturnsCreatedStatus()
+            throws Exception {
+
+        CreateProductRequest request =
+                new CreateProductRequest(
+                        "123456789012",
+                        "Orange Juice",
+                        "Example Brand",
+                        "Beverages",
+                        10,
+                        5,
+                        20,
+                        new BigDecimal("2.50")
+                );
 
         ProductResponse response = new ProductResponse(
                 1L,
+                10L,
                 "123456789012",
                 "Orange Juice",
                 "Example Brand",
@@ -71,24 +83,46 @@ class ProductControllerTest {
                 true,
                 false,
                 10,
-                OffsetDateTime.parse("2026-09-20T17:00:00-04:00"),
-                OffsetDateTime.parse("2026-09-20T17:00:00-04:00"));
+                OffsetDateTime.parse(
+                        "2026-09-20T17:00:00-04:00"
+                ),
+                OffsetDateTime.parse(
+                        "2026-09-20T17:00:00-04:00"
+                )
+        );
 
         when(productService.createProduct(
-                any(CreateProductRequest.class)))
-                .thenReturn(response);
+                eq(10L),
+                any(CreateProductRequest.class)
+        )).thenReturn(response);
 
-        mockMvc.perform(post("/api/products")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(
+                        post("/api/stores/10/products")
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content(
+                                        objectMapper
+                                                .writeValueAsString(
+                                                        request
+                                                )
+                                )
+                )
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.barcode")
-                        .value("123456789012"))
-                .andExpect(jsonPath("$.name")
-                        .value("Orange Juice"))
-                .andExpect(jsonPath("$.source")
-                        .value("MANUAL"));
+                .andExpect(jsonPath("$.storeId").value(10))
+                .andExpect(
+                        jsonPath("$.barcode")
+                                .value("123456789012")
+                )
+                .andExpect(
+                        jsonPath("$.name")
+                                .value("Orange Juice")
+                )
+                .andExpect(
+                        jsonPath("$.source")
+                                .value("MANUAL")
+                );
     }
 
     @Test
@@ -106,35 +140,103 @@ class ProductControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/products")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(invalidRequest))
+        mockMvc.perform(
+                        post("/api/stores/10/products")
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content(invalidRequest)
+                )
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message")
-                        .value("Request validation failed"))
-                .andExpect(jsonPath("$.validationErrors.barcode")
-                        .value("Barcode is required"))
-                .andExpect(jsonPath("$.validationErrors.name")
-                        .value("Product name is required"))
-                .andExpect(jsonPath("$.validationErrors.quantity")
-                        .value("Quantity cannot be negative"))
-                .andExpect(jsonPath("$.validationErrors.unitCost")
-                        .value("Unit cost cannot be negative"));
+                .andExpect(
+                        jsonPath("$.message")
+                                .value(
+                                        "Request validation failed"
+                                )
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.validationErrors.barcode"
+                        ).value("Barcode is required")
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.validationErrors.name"
+                        ).value(
+                                "Product name is required"
+                        )
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.validationErrors.quantity"
+                        ).value(
+                                "Quantity cannot be negative"
+                        )
+                )
+                .andExpect(
+                        jsonPath(
+                                "$.validationErrors.unitCost"
+                        ).value(
+                                "Unit cost cannot be negative"
+                        )
+                );
     }
 
     @Test
-    void returnsNotFoundForMissingProduct() throws Exception {
-        when(productService.getProductById(999L))
-                .thenThrow(new ProductNotFoundException(
-                        "Product with ID 999 was not found"));
+    void returnsNotFoundForMissingProduct()
+            throws Exception {
 
-        mockMvc.perform(get("/api/products/999"))
+        when(productService.getProductById(10L, 999L))
+                .thenThrow(new ProductNotFoundException(
+                        "Product with ID 999 was not found "
+                                + "in store 10"
+                ));
+
+        mockMvc.perform(
+                        get("/api/stores/10/products/999")
+                )
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.error").value("Not Found"))
-                .andExpect(jsonPath("$.message")
-                        .value("Product with ID 999 was not found"))
-                .andExpect(jsonPath("$.path")
-                        .value("/api/products/999"));
+                .andExpect(
+                        jsonPath("$.error")
+                                .value("Not Found")
+                )
+                .andExpect(
+                        jsonPath("$.message")
+                                .value(
+                                        "Product with ID 999 "
+                                                + "was not found "
+                                                + "in store 10"
+                                )
+                )
+                .andExpect(
+                        jsonPath("$.path")
+                                .value(
+                                        "/api/stores/10/products/999"
+                                )
+                );
+    }
+
+    @Test
+    void returnsNotFoundForMissingStore()
+            throws Exception {
+
+        when(productService.getActiveProducts(999L))
+                .thenThrow(new StoreNotFoundException(
+                        "Active store with ID 999 was not found"
+                ));
+
+        mockMvc.perform(
+                        get("/api/stores/999/products")
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(
+                        jsonPath("$.message")
+                                .value(
+                                        "Active store with ID 999 "
+                                                + "was not found"
+                                )
+                );
     }
 }

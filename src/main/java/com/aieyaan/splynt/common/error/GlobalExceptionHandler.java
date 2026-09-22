@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.aieyaan.splynt.product.exception.DuplicateProductException;
 import com.aieyaan.splynt.product.exception.ProductNotFoundException;
+import com.aieyaan.splynt.tenant.exception.StoreNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -27,7 +28,21 @@ public class GlobalExceptionHandler {
                 HttpStatus.NOT_FOUND,
                 exception.getMessage(),
                 request.getRequestURI(),
-                Map.of());
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(StoreNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleStoreNotFound(
+            StoreNotFoundException exception,
+            HttpServletRequest request) {
+
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
     }
 
     @ExceptionHandler(DuplicateProductException.class)
@@ -39,7 +54,8 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT,
                 exception.getMessage(),
                 request.getRequestURI(),
-                Map.of());
+                Map.of()
+        );
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -51,7 +67,8 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 exception.getMessage(),
                 request.getRequestURI(),
-                Map.of());
+                Map.of()
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -59,19 +76,24 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException exception,
             HttpServletRequest request) {
 
-        Map<String, String> validationErrors = new LinkedHashMap<>();
+        Map<String, String> validationErrors =
+                new LinkedHashMap<>();
 
         exception.getBindingResult()
                 .getFieldErrors()
-                .forEach(error -> validationErrors.putIfAbsent(
-                        error.getField(),
-                        error.getDefaultMessage()));
+                .forEach(error ->
+                        validationErrors.putIfAbsent(
+                                error.getField(),
+                                error.getDefaultMessage()
+                        )
+                );
 
         return buildResponse(
                 HttpStatus.BAD_REQUEST,
                 "Request validation failed",
                 request.getRequestURI(),
-                validationErrors);
+                validationErrors
+        );
     }
 
     private ResponseEntity<ApiErrorResponse> buildResponse(
@@ -86,8 +108,11 @@ public class GlobalExceptionHandler {
                 status.getReasonPhrase(),
                 message,
                 path,
-                validationErrors);
+                validationErrors
+        );
 
-        return ResponseEntity.status(status).body(response);
+        return ResponseEntity
+                .status(status)
+                .body(response);
     }
 }

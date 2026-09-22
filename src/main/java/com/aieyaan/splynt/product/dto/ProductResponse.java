@@ -8,6 +8,7 @@ import com.aieyaan.splynt.product.ProductSource;
 
 public record ProductResponse(
         Long id,
+        Long storeId,
         String barcode,
         String name,
         String brand,
@@ -27,6 +28,7 @@ public record ProductResponse(
     public static ProductResponse from(Product product) {
         return new ProductResponse(
                 product.getId(),
+                product.getStoreId(),
                 product.getBarcode(),
                 product.getName(),
                 product.getBrand(),
@@ -41,6 +43,7 @@ public record ProductResponse(
                 product.isLowStock(),
                 product.calculateBaseReorderQuantity(),
                 product.getCreatedAt(),
-                product.getUpdatedAt());
+                product.getUpdatedAt()
+        );
     }
 }

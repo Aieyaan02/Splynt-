@@ -17,7 +17,7 @@ import com.aieyaan.splynt.product.dto.ProductResponse;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/api/stores/{storeId}/products")
 public class ProductController {
 
     private final ProductService productService;
@@ -29,30 +29,45 @@ public class ProductController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ProductResponse createProduct(
+            @PathVariable Long storeId,
             @Valid @RequestBody CreateProductRequest request) {
 
-        return productService.createProduct(request);
+        return productService.createProduct(storeId, request);
     }
 
     @GetMapping
-    public List<ProductResponse> getActiveProducts() {
-        return productService.getActiveProducts();
+    public List<ProductResponse> getActiveProducts(
+            @PathVariable Long storeId) {
+
+        return productService.getActiveProducts(storeId);
     }
 
     @GetMapping("/low-stock")
-    public List<ProductResponse> getLowStockProducts() {
-        return productService.getLowStockProducts();
+    public List<ProductResponse> getLowStockProducts(
+            @PathVariable Long storeId) {
+
+        return productService.getLowStockProducts(storeId);
     }
 
-    @GetMapping("/{id}")
-    public ProductResponse getProductById(@PathVariable Long id) {
-        return productService.getProductById(id);
+    @GetMapping("/{productId}")
+    public ProductResponse getProductById(
+            @PathVariable Long storeId,
+            @PathVariable Long productId) {
+
+        return productService.getProductById(
+                storeId,
+                productId
+        );
     }
 
     @GetMapping("/barcode/{barcode}")
     public ProductResponse getProductByBarcode(
+            @PathVariable Long storeId,
             @PathVariable String barcode) {
 
-        return productService.getProductByBarcode(barcode);
+        return productService.getProductByBarcode(
+                storeId,
+                barcode
+        );
     }
 }
