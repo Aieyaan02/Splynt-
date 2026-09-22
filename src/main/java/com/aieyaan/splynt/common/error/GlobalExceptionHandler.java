@@ -4,12 +4,15 @@ import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.aieyaan.splynt.auth.exception.DuplicateEmailException;
+import com.aieyaan.splynt.auth.exception.DuplicateOrganizationSlugException;
 import com.aieyaan.splynt.product.exception.DuplicateProductException;
 import com.aieyaan.splynt.product.exception.ProductNotFoundException;
 import com.aieyaan.splynt.tenant.exception.StoreNotFoundException;
@@ -53,6 +56,39 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.CONFLICT,
                 exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler({
+            DuplicateEmailException.class,
+            DuplicateOrganizationSlugException.class
+    })
+    public ResponseEntity<ApiErrorResponse>
+            handleRegistrationConflict(
+                    RuntimeException exception,
+                    HttpServletRequest request
+            ) {
+
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse>
+            handleDataIntegrityViolation(
+                    DataIntegrityViolationException exception,
+                    HttpServletRequest request
+            ) {
+
+        return buildResponse(
+                HttpStatus.CONFLICT,
+                "The request conflicts with existing data",
                 request.getRequestURI(),
                 Map.of()
         );
