@@ -3,6 +3,7 @@ package com.aieyaan.splynt.product;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +19,10 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/stores/{storeId}/products")
+@PreAuthorize(
+        "@storeAuthorizationService.canAccess("
+                + "authentication, #storeId)"
+)
 public class ProductController {
 
     private final ProductService productService;
