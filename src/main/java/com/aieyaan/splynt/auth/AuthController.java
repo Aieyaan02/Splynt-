@@ -1,5 +1,7 @@
 package com.aieyaan.splynt.auth;
 
+import com.aieyaan.splynt.auth.dto.LoginRequest;
+import com.aieyaan.splynt.auth.dto.LoginResponse;
 import com.aieyaan.splynt.auth.dto.RegisterRequest;
 import com.aieyaan.splynt.auth.dto.RegisterResponse;
 
@@ -32,5 +34,14 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        return ResponseEntity.ok(
+                authService.login(request)
+        );
     }
 }

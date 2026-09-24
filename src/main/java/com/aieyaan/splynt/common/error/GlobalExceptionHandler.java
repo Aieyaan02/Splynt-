@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.aieyaan.splynt.auth.exception.DuplicateEmailException;
 import com.aieyaan.splynt.auth.exception.DuplicateOrganizationSlugException;
+import com.aieyaan.splynt.auth.exception.InvalidCredentialsException;
 import com.aieyaan.splynt.product.exception.DuplicateProductException;
 import com.aieyaan.splynt.product.exception.ProductNotFoundException;
 import com.aieyaan.splynt.tenant.exception.StoreNotFoundException;
@@ -73,6 +74,21 @@ public class GlobalExceptionHandler {
 
         return buildResponse(
                 HttpStatus.CONFLICT,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiErrorResponse>
+            handleInvalidCredentials(
+                    InvalidCredentialsException exception,
+                    HttpServletRequest request
+            ) {
+
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
                 exception.getMessage(),
                 request.getRequestURI(),
                 Map.of()

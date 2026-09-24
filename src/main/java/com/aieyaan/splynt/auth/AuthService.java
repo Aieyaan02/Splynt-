@@ -1,9 +1,14 @@
 package com.aieyaan.splynt.auth;
 
+import com.aieyaan.splynt.auth.dto.LoginRequest;
+import com.aieyaan.splynt.auth.dto.LoginResponse;
 import com.aieyaan.splynt.auth.dto.RegisterRequest;
 import com.aieyaan.splynt.auth.dto.RegisterResponse;
 import com.aieyaan.splynt.auth.exception.DuplicateEmailException;
 import com.aieyaan.splynt.auth.exception.DuplicateOrganizationSlugException;
+import com.aieyaan.splynt.auth.exception.InvalidCredentialsException;
+import com.aieyaan.splynt.security.JwtTokenService;
+import com.aieyaan.splynt.security.JwtTokenService.GeneratedToken;
 import com.aieyaan.splynt.tenant.AppUser;
 import com.aieyaan.splynt.tenant.AppUserRepository;
 import com.aieyaan.splynt.tenant.MembershipRole;
@@ -29,26 +34,27 @@ public class AuthService {
     private final OrganizationMembershipRepository
             membershipRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenService jwtTokenService;
 
     public AuthService(
             AppUserRepository appUserRepository,
             OrganizationRepository organizationRepository,
             StoreRepository storeRepository,
             OrganizationMembershipRepository membershipRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            JwtTokenService jwtTokenService
     ) {
         this.appUserRepository = appUserRepository;
         this.organizationRepository = organizationRepository;
         this.storeRepository = storeRepository;
         this.membershipRepository = membershipRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtTokenService = jwtTokenService;
     }
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
-        String normalizedEmail = request.email()
-                .trim()
-                .toLowerCase(Locale.ROOT);
+        String normalizedEmail = normalizeEmail(request.email());
 
         String organizationSlug = request.organizationSlug()
                 .trim()
@@ -124,5 +130,49 @@ public class AuthService {
                 store.getSlug(),
                 membership.getRole()
         );
+    }
+
+    @Transactional
+    public LoginResponse login(LoginRequest request) {
+        String normalizedEmail = normalizeEmail(request.email());
+
+        AppUser user = appUserRepository
+                .findByEmailIgnoreCase(normalizedEmail)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        if (!user.isEnabled()) {
+            throw new InvalidCredentialsException();
+        }
+
+        boolean passwordMatches = passwordEncoder.matches(
+                request.password(),
+                user.getPasswordHash()
+        );
+
+        if (!passwordMatches) {
+            throw new InvalidCredentialsException();
+        }
+
+        user.recordSuccessfulLogin();
+
+        GeneratedToken generatedToken =
+                jwtTokenService.generateAccessToken(user);
+
+        return new LoginResponse(
+                generatedToken.value(),
+                "Bearer",
+                generatedToken.expiresInSeconds(),
+                generatedToken.expiresAt(),
+                user.getId(),
+                user.getEmail(),
+                user.getFirstName(),
+                user.getLastName()
+        );
+    }
+
+    private String normalizeEmail(String email) {
+        return email
+                .trim()
+                .toLowerCase(Locale.ROOT);
     }
 }
