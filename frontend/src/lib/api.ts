@@ -1,0 +1,206 @@
+import type {
+    Account,
+    ApiError,
+    CreateProductRequest,
+    InventoryChangeRequest,
+    LoginRequest,
+    LoginResponse,
+    Product,
+    RegisterRequest,
+    RegisterResponse
+} from "../types";
+
+const TOKEN_KEY = "splynt.accessToken";
+
+export class ApiRequestError extends Error {
+    readonly status: number;
+    readonly validationErrors: Record<string, string>;
+
+    constructor(
+        message: string,
+        status: number,
+        validationErrors: Record<string, string> = {}
+    ) {
+        super(message);
+
+        this.name = "ApiRequestError";
+        this.status = status;
+        this.validationErrors = validationErrors;
+    }
+}
+
+export function getAccessToken(): string | null {
+    return sessionStorage.getItem(TOKEN_KEY);
+}
+
+export function setAccessToken(token: string): void {
+    sessionStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearAccessToken(): void {
+    sessionStorage.removeItem(TOKEN_KEY);
+}
+
+async function request<T>(
+    path: string,
+    options: RequestInit = {},
+    authenticated = true
+): Promise<T> {
+    const headers = new Headers(options.headers);
+
+    headers.set("Accept", "application/json");
+
+    if (options.body !== undefined) {
+        headers.set("Content-Type", "application/json");
+    }
+
+    if (authenticated) {
+        const token = getAccessToken();
+
+        if (token) {
+            headers.set(
+                "Authorization",
+                `Bearer ${token}`
+            );
+        }
+    }
+
+    const response = await fetch(path, {
+        ...options,
+        headers
+    });
+
+    const contentType =
+        response.headers.get("content-type") ?? "";
+
+    let responseBody: unknown = null;
+
+    if (contentType.includes("application/json")) {
+        responseBody = await response.json();
+    } else if (response.status !== 204) {
+        const text = await response.text();
+        responseBody = text || null;
+    }
+
+    if (!response.ok) {
+        if (response.status === 401 && authenticated) {
+            clearAccessToken();
+        }
+
+        const apiError = isApiError(responseBody)
+            ? responseBody
+            : null;
+
+        throw new ApiRequestError(
+            apiError?.message
+                ?? `Request failed with status ${response.status}`,
+            response.status,
+            apiError?.validationErrors ?? {}
+        );
+    }
+
+    return responseBody as T;
+}
+
+function isApiError(value: unknown): value is ApiError {
+    return (
+        typeof value === "object"
+        && value !== null
+        && (
+            "message" in value
+            || "status" in value
+            || "validationErrors" in value
+        )
+    );
+}
+
+export const authApi = {
+    login(requestBody: LoginRequest): Promise<LoginResponse> {
+        return request<LoginResponse>(
+            "/api/auth/login",
+            {
+                method: "POST",
+                body: JSON.stringify(requestBody)
+            },
+            false
+        );
+    },
+
+    register(
+        requestBody: RegisterRequest
+    ): Promise<RegisterResponse> {
+        return request<RegisterResponse>(
+            "/api/auth/register",
+            {
+                method: "POST",
+                body: JSON.stringify(requestBody)
+            },
+            false
+        );
+    }
+};
+
+export const accountApi = {
+    getCurrent(): Promise<Account> {
+        return request<Account>("/api/me");
+    }
+};
+
+export const productApi = {
+    getAll(storeId: number): Promise<Product[]> {
+        return request<Product[]>(
+            `/api/stores/${storeId}/products`
+        );
+    },
+
+    getLowStock(storeId: number): Promise<Product[]> {
+        return request<Product[]>(
+            `/api/stores/${storeId}/products/low-stock`
+        );
+    },
+
+    create(
+        storeId: number,
+        requestBody: CreateProductRequest
+    ): Promise<Product> {
+        return request<Product>(
+            `/api/stores/${storeId}/products`,
+            {
+                method: "POST",
+                body: JSON.stringify(requestBody)
+            }
+        );
+    }
+};
+
+export const inventoryApi = {
+    recordSale(
+        storeId: number,
+        productId: number,
+        requestBody: InventoryChangeRequest
+    ): Promise<unknown> {
+        return request<unknown>(
+            `/api/stores/${storeId}`
+                + `/products/${productId}/inventory/sales`,
+            {
+                method: "POST",
+                body: JSON.stringify(requestBody)
+            }
+        );
+    },
+
+    recordRestock(
+        storeId: number,
+        productId: number,
+        requestBody: InventoryChangeRequest
+    ): Promise<unknown> {
+        return request<unknown>(
+            `/api/stores/${storeId}`
+                + `/products/${productId}/inventory/restocks`,
+            {
+                method: "POST",
+                body: JSON.stringify(requestBody)
+            }
+        );
+    }
+};
