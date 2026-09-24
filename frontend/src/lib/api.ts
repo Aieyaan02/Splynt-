@@ -153,6 +153,12 @@ export const productApi = {
         );
     },
 
+    getArchived(storeId: number): Promise<Product[]> {
+        return request<Product[]>(
+            `/api/stores/${storeId}/products/archived`
+        );
+    },
+
     getLowStock(storeId: number): Promise<Product[]> {
         return request<Product[]>(
             `/api/stores/${storeId}/products/low-stock`
@@ -180,6 +186,19 @@ export const productApi = {
             `/api/stores/${storeId}/products/${productId}`,
             {
                 method: "DELETE"
+            }
+        );
+    },
+
+    restore(
+        storeId: number,
+        productId: number
+    ): Promise<Product> {
+        return request<Product>(
+            `/api/stores/${storeId}`
+                + `/products/${productId}/restore`,
+            {
+                method: "POST"
             }
         );
     }

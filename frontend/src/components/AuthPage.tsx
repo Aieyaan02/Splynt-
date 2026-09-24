@@ -81,10 +81,35 @@ export function AuthPage({
         setError("");
         setSuccess("");
 
-        try {
-            await authApi.register(registration);
+        const uniqueSuffix =
+            crypto.randomUUID().slice(0, 8);
 
-            setLoginEmail(registration.email);
+        const registrationRequest: RegisterRequest = {
+            ...registration,
+
+            organizationName:
+                registration.organizationName.trim(),
+
+            storeName:
+                registration.storeName.trim(),
+
+            organizationSlug:
+                `${createSlug(
+                    registration.organizationName,
+                    "business"
+                )}-${uniqueSuffix}`,
+
+            storeSlug:
+                createSlug(
+                    registration.storeName,
+                    "store"
+                )
+        };
+
+        try {
+            await authApi.register(registrationRequest);
+
+            setLoginEmail(registration.email.trim());
             setLoginPassword("");
             setRegistration(initialRegistration);
             setMode("login");
@@ -135,6 +160,7 @@ export function AuthPage({
                     <div className="hero-features">
                         <article>
                             <strong>Multi-tenant</strong>
+
                             <span>
                                 Secure organization and store isolation
                             </span>
@@ -142,6 +168,7 @@ export function AuthPage({
 
                         <article>
                             <strong>Real-time ready</strong>
+
                             <span>
                                 Designed for Clover synchronization
                             </span>
@@ -149,6 +176,7 @@ export function AuthPage({
 
                         <article>
                             <strong>Actionable</strong>
+
                             <span>
                                 Stock alerts with suggested reorder amounts
                             </span>
@@ -213,6 +241,7 @@ export function AuthPage({
                         >
                             <div className="form-heading">
                                 <h2>Welcome back</h2>
+
                                 <p>
                                     Sign in to manage your inventory.
                                 </p>
@@ -220,6 +249,7 @@ export function AuthPage({
 
                             <label>
                                 Email address
+
                                 <input
                                     type="email"
                                     value={loginEmail}
@@ -235,6 +265,7 @@ export function AuthPage({
 
                             <label>
                                 Password
+
                                 <input
                                     type="password"
                                     value={loginPassword}
@@ -253,7 +284,9 @@ export function AuthPage({
                                 type="submit"
                                 disabled={busy}
                             >
-                                {busy ? "Signing in..." : "Sign in"}
+                                {busy
+                                    ? "Signing in..."
+                                    : "Sign in"}
                             </button>
                         </form>
                     ) : (
@@ -263,17 +296,21 @@ export function AuthPage({
                         >
                             <div className="form-heading">
                                 <h2>Create your workspace</h2>
+
                                 <p>
-                                    Set up your organization and first
-                                    store.
+                                    Set up your business and first store.
                                 </p>
                             </div>
 
                             <div className="form-grid two-columns">
                                 <label>
                                     First name
+
                                     <input
-                                        value={registration.firstName}
+                                        value={
+                                            registration.firstName
+                                        }
+                                        autoComplete="given-name"
                                         onChange={event =>
                                             updateRegistration(
                                                 "firstName",
@@ -286,8 +323,12 @@ export function AuthPage({
 
                                 <label>
                                     Last name
+
                                     <input
-                                        value={registration.lastName}
+                                        value={
+                                            registration.lastName
+                                        }
+                                        autoComplete="family-name"
                                         onChange={event =>
                                             updateRegistration(
                                                 "lastName",
@@ -301,6 +342,7 @@ export function AuthPage({
 
                             <label>
                                 Email address
+
                                 <input
                                     type="email"
                                     value={registration.email}
@@ -317,6 +359,7 @@ export function AuthPage({
 
                             <label>
                                 Password
+
                                 <input
                                     type="password"
                                     value={registration.password}
@@ -331,16 +374,20 @@ export function AuthPage({
                                     }
                                     required
                                 />
-                                <small>Use 10–72 characters.</small>
+
+                                <small>
+                                    Use 10–72 characters.
+                                </small>
                             </label>
 
                             <label>
-                                Organization name
+                                Business name
+
                                 <input
                                     value={
                                         registration.organizationName
                                     }
-                                    placeholder="Grab n' GO"
+                                    autoComplete="organization"
                                     onChange={event =>
                                         updateRegistration(
                                             "organizationName",
@@ -352,53 +399,19 @@ export function AuthPage({
                             </label>
 
                             <label>
-                                Organization slug
+                                Store name
+
                                 <input
-                                    value={
-                                        registration.organizationSlug
-                                    }
-                                    placeholder="grab-n-go"
+                                    value={registration.storeName}
                                     onChange={event =>
                                         updateRegistration(
-                                            "organizationSlug",
+                                            "storeName",
                                             event.target.value
                                         )
                                     }
                                     required
                                 />
                             </label>
-
-                            <div className="form-grid two-columns">
-                                <label>
-                                    Store name
-                                    <input
-                                        value={registration.storeName}
-                                        placeholder="Miami Beach"
-                                        onChange={event =>
-                                            updateRegistration(
-                                                "storeName",
-                                                event.target.value
-                                            )
-                                        }
-                                        required
-                                    />
-                                </label>
-
-                                <label>
-                                    Store slug
-                                    <input
-                                        value={registration.storeSlug}
-                                        placeholder="miami-beach"
-                                        onChange={event =>
-                                            updateRegistration(
-                                                "storeSlug",
-                                                event.target.value
-                                            )
-                                        }
-                                        required
-                                    />
-                                </label>
-                            </div>
 
                             <button
                                 className="button primary wide"
@@ -415,6 +428,23 @@ export function AuthPage({
             </section>
         </main>
     );
+}
+
+function createSlug(
+    value: string,
+    fallback: string
+): string {
+    const normalizedValue = value
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 80)
+        .replace(/-+$/g, "");
+
+    return normalizedValue || fallback;
 }
 
 function getErrorMessage(error: unknown): string {

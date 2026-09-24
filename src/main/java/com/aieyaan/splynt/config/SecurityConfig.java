@@ -34,6 +34,24 @@ public class SecurityConfig {
                         ))
 
                 .authorizeHttpRequests(authorize -> authorize
+                        /*
+                         * React application files must be publicly accessible.
+                         * Authentication is handled by the React login page.
+                         */
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/assets/**",
+                                "/favicon.svg",
+                                "/icons.svg",
+                                "/error"
+                        )
+                        .permitAll()
+
+                        /*
+                         * Registration and login must remain public because
+                         * users do not have a JWT before authenticating.
+                         */
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/auth/register",
@@ -41,14 +59,22 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
+                        /*
+                         * Health checks are used by Docker and AWS.
+                         * Swagger remains accessible during development.
+                         */
                         .requestMatchers(
                                 "/actuator/health",
+                                "/actuator/health/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         )
                         .permitAll()
 
+                        /*
+                         * Every other API request requires a valid JWT.
+                         */
                         .anyRequest()
                         .authenticated())
 

@@ -29,13 +29,20 @@ export function ProductDialog({
     const [name, setName] = useState("");
     const [brand, setBrand] = useState("");
     const [category, setCategory] = useState("");
-    const [quantity, setQuantity] = useState(0);
-    const [reorderLevel, setReorderLevel] = useState(5);
-    const [targetStock, setTargetStock] = useState(20);
+
+    /*
+     * Keep number inputs as strings while the user edits them.
+     * This allows the field to be completely empty instead of
+     * immediately changing an empty value back to zero.
+     */
+    const [quantity, setQuantity] = useState("0");
+    const [reorderLevel, setReorderLevel] = useState("5");
+    const [targetStock, setTargetStock] = useState("20");
     const [unitCost, setUnitCost] = useState("");
 
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
+
     const [validationErrors, setValidationErrors] =
         useState<Record<string, string>>({});
 
@@ -53,7 +60,64 @@ export function ProductDialog({
         setError("");
         setValidationErrors({});
 
-        if (targetStock < reorderLevel) {
+        const parsedQuantity =
+            parseNonNegativeInteger(quantity);
+
+        const parsedReorderLevel =
+            parseNonNegativeInteger(reorderLevel);
+
+        const parsedTargetStock =
+            parseNonNegativeInteger(targetStock);
+
+        const parsedUnitCost =
+            unitCost.trim() === ""
+                ? null
+                : Number(unitCost);
+
+        const fieldErrors: Record<string, string> = {};
+
+        if (parsedQuantity === null) {
+            fieldErrors.quantity =
+                "Starting quantity must be a whole number of zero or greater";
+        }
+
+        if (parsedReorderLevel === null) {
+            fieldErrors.reorderLevel =
+                "Reorder level must be a whole number of zero or greater";
+        }
+
+        if (parsedTargetStock === null) {
+            fieldErrors.targetStock =
+                "Target stock must be a whole number of zero or greater";
+        }
+
+        if (
+            parsedUnitCost !== null
+            && (
+                !Number.isFinite(parsedUnitCost)
+                || parsedUnitCost < 0
+            )
+        ) {
+            fieldErrors.unitCost =
+                "Unit cost must be zero or greater";
+        }
+
+        if (Object.keys(fieldErrors).length > 0) {
+            setValidationErrors(fieldErrors);
+            return;
+        }
+
+        /*
+         * These values cannot be null here because the validation
+         * above would have returned from the function.
+         */
+        const validQuantity = parsedQuantity as number;
+        const validReorderLevel =
+            parsedReorderLevel as number;
+        const validTargetStock =
+            parsedTargetStock as number;
+
+        if (validTargetStock < validReorderLevel) {
             setValidationErrors({
                 targetStock:
                     "Target stock must be at least the reorder level"
@@ -66,13 +130,10 @@ export function ProductDialog({
             name: name.trim(),
             brand: brand.trim() || null,
             category: category.trim() || null,
-            quantity,
-            reorderLevel,
-            targetStock,
-            unitCost:
-                unitCost.trim() === ""
-                    ? null
-                    : Number(unitCost)
+            quantity: validQuantity,
+            reorderLevel: validReorderLevel,
+            targetStock: validTargetStock,
+            unitCost: parsedUnitCost
         };
 
         setBusy(true);
@@ -88,6 +149,7 @@ export function ProductDialog({
         } catch (requestError) {
             if (requestError instanceof ApiRequestError) {
                 setError(requestError.message);
+
                 setValidationErrors(
                     requestError.validationErrors
                 );
@@ -124,7 +186,9 @@ export function ProductDialog({
                         <span className="section-kicker">
                             New catalog item
                         </span>
+
                         <h2>Add product</h2>
+
                         <p>
                             Add a product and define its stock targets.
                         </p>
@@ -150,6 +214,7 @@ export function ProductDialog({
                 <div className="form-grid two-columns">
                     <label>
                         Product name
+
                         <input
                             value={name}
                             onChange={event =>
@@ -157,6 +222,7 @@ export function ProductDialog({
                             }
                             required
                         />
+
                         <FieldError
                             message={validationErrors.name}
                         />
@@ -164,6 +230,7 @@ export function ProductDialog({
 
                     <label>
                         Barcode
+
                         <input
                             value={barcode}
                             onChange={event =>
@@ -171,6 +238,7 @@ export function ProductDialog({
                             }
                             required
                         />
+
                         <FieldError
                             message={validationErrors.barcode}
                         />
@@ -178,6 +246,7 @@ export function ProductDialog({
 
                     <label>
                         Brand
+
                         <input
                             value={brand}
                             onChange={event =>
@@ -188,6 +257,7 @@ export function ProductDialog({
 
                     <label>
                         Category
+
                         <input
                             value={category}
                             onChange={event =>
@@ -198,17 +268,26 @@ export function ProductDialog({
 
                     <label>
                         Starting quantity
+
                         <input
                             type="number"
                             min="0"
+                            step="1"
+                            inputMode="numeric"
                             value={quantity}
+                            onFocus={event =>
+                                event.currentTarget.select()
+                            }
                             onChange={event =>
                                 setQuantity(
-                                    Number(event.target.value)
+                                    normalizeWholeNumberInput(
+                                        event.target.value
+                                    )
                                 )
                             }
                             required
                         />
+
                         <FieldError
                             message={validationErrors.quantity}
                         />
@@ -216,17 +295,26 @@ export function ProductDialog({
 
                     <label>
                         Reorder level
+
                         <input
                             type="number"
                             min="0"
+                            step="1"
+                            inputMode="numeric"
                             value={reorderLevel}
+                            onFocus={event =>
+                                event.currentTarget.select()
+                            }
                             onChange={event =>
                                 setReorderLevel(
-                                    Number(event.target.value)
+                                    normalizeWholeNumberInput(
+                                        event.target.value
+                                    )
                                 )
                             }
                             required
                         />
+
                         <FieldError
                             message={
                                 validationErrors.reorderLevel
@@ -236,17 +324,26 @@ export function ProductDialog({
 
                     <label>
                         Target stock
+
                         <input
                             type="number"
                             min="0"
+                            step="1"
+                            inputMode="numeric"
                             value={targetStock}
+                            onFocus={event =>
+                                event.currentTarget.select()
+                            }
                             onChange={event =>
                                 setTargetStock(
-                                    Number(event.target.value)
+                                    normalizeWholeNumberInput(
+                                        event.target.value
+                                    )
                                 )
                             }
                             required
                         />
+
                         <FieldError
                             message={
                                 validationErrors.targetStock
@@ -256,16 +353,22 @@ export function ProductDialog({
 
                     <label>
                         Unit cost
+
                         <input
                             type="number"
                             min="0"
                             step="0.01"
+                            inputMode="decimal"
                             value={unitCost}
+                            onFocus={event =>
+                                event.currentTarget.select()
+                            }
                             onChange={event =>
                                 setUnitCost(event.target.value)
                             }
                             placeholder="0.00"
                         />
+
                         <FieldError
                             message={validationErrors.unitCost}
                         />
@@ -287,12 +390,47 @@ export function ProductDialog({
                         type="submit"
                         disabled={busy}
                     >
-                        {busy ? "Adding product..." : "Add product"}
+                        {busy
+                            ? "Adding product..."
+                            : "Add product"}
                     </button>
                 </footer>
             </form>
         </dialog>
     );
+}
+
+function normalizeWholeNumberInput(
+    value: string
+): string {
+    if (value === "") {
+        return "";
+    }
+
+    /*
+     * Convert values such as 010 into 10 while still permitting
+     * a single zero.
+     */
+    return value.replace(/^0+(?=\d)/, "");
+}
+
+function parseNonNegativeInteger(
+    value: string
+): number | null {
+    if (value.trim() === "") {
+        return null;
+    }
+
+    const parsedValue = Number(value);
+
+    if (
+        !Number.isInteger(parsedValue)
+        || parsedValue < 0
+    ) {
+        return null;
+    }
+
+    return parsedValue;
 }
 
 interface FieldErrorProps {

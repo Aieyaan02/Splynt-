@@ -1,0 +1,41 @@
+name: splynt-local
+
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: splynt
+      POSTGRES_USER: splynt
+      POSTGRES_PASSWORD: ${SPLYNT_DB_PASSWORD}
+    volumes:
+      - splynt_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U splynt -d splynt
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  application:
+    image: splynt:local
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/splynt
+      SPRING_DATASOURCE_USERNAME: splynt
+      SPRING_DATASOURCE_PASSWORD: ${SPLYNT_DB_PASSWORD}
+
+      SPLYNT_JWT_SECRET: ${SPLYNT_JWT_SECRET}
+      SPLYNT_JWT_ISSUER: http://localhost:8080
+
+      SPRINGDOC_ENABLED: "false"
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  splynt_postgres_data:

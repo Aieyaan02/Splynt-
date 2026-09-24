@@ -48,6 +48,13 @@ public class ProductController {
         return productService.getActiveProducts(storeId);
     }
 
+    @GetMapping("/archived")
+    public List<ProductResponse> getArchivedProducts(
+            @PathVariable Long storeId) {
+
+        return productService.getArchivedProducts(storeId);
+    }
+
     @GetMapping("/low-stock")
     public List<ProductResponse> getLowStockProducts(
             @PathVariable Long storeId) {
@@ -84,6 +91,17 @@ public class ProductController {
             @PathVariable Long productId) {
 
         productService.archiveProduct(
+                storeId,
+                productId
+        );
+    }
+
+    @PostMapping("/{productId}/restore")
+    public ProductResponse restoreProduct(
+            @PathVariable Long storeId,
+            @PathVariable Long productId) {
+
+        return productService.restoreProduct(
                 storeId,
                 productId
         );

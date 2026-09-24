@@ -72,6 +72,17 @@ public interface ProductRepository
             SELECT p
             FROM Product p
             WHERE p.store.id = :storeId
+              AND p.active = false
+            ORDER BY p.name ASC
+            """)
+    List<Product> findAllByStoreIdAndActiveFalseOrderByNameAsc(
+            @Param("storeId") Long storeId
+    );
+
+    @Query("""
+            SELECT p
+            FROM Product p
+            WHERE p.store.id = :storeId
               AND p.active = true
               AND p.quantity <= p.reorderLevel
             ORDER BY p.quantity ASC, p.name ASC

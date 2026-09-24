@@ -72,9 +72,13 @@ export function Dashboard({
     const [selectedStoreId, setSelectedStoreId] =
         useState<number | null>(initialStore?.id ?? null);
 
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] =
+        useState<Product[]>([]);
 
     const [lowStockProducts, setLowStockProducts] =
+        useState<Product[]>([]);
+
+    const [archivedProducts, setArchivedProducts] =
         useState<Product[]>([]);
 
     const [loading, setLoading] = useState(false);
@@ -87,6 +91,9 @@ export function Dashboard({
         useState<InventorySelection | null>(null);
 
     const [archivingProductId, setArchivingProductId] =
+        useState<number | null>(null);
+
+    const [restoringProductId, setRestoringProductId] =
         useState<number | null>(null);
 
     const selectedStore =
@@ -103,14 +110,19 @@ export function Dashboard({
         setError("");
 
         try {
-            const [allProducts, lowStock] =
-                await Promise.all([
-                    productApi.getAll(selectedStoreId),
-                    productApi.getLowStock(selectedStoreId)
-                ]);
+            const [
+                allProducts,
+                lowStock,
+                archived
+            ] = await Promise.all([
+                productApi.getAll(selectedStoreId),
+                productApi.getLowStock(selectedStoreId),
+                productApi.getArchived(selectedStoreId)
+            ]);
 
             setProducts(allProducts);
             setLowStockProducts(lowStock);
+            setArchivedProducts(archived);
         } catch (requestError) {
             setError(getErrorMessage(requestError));
         } finally {
@@ -128,6 +140,11 @@ export function Dashboard({
             String(selectedStoreId)
         );
 
+        /*
+         * Loading data when the selected store changes is an
+         * intentional synchronization with the backend API.
+         */
+        // oxlint-disable-next-line react/set-state-in-effect
         void loadInventory();
     }, [selectedStoreId, loadInventory]);
 
@@ -191,6 +208,38 @@ export function Dashboard({
         }
     }
 
+    async function restoreProduct(product: Product) {
+        if (selectedStoreId === null) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Restore "${product.name}"?\n\n`
+            + "The product will return to the active catalog "
+            + "with its previous stock information."
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setRestoringProductId(product.id);
+        setError("");
+
+        try {
+            await productApi.restore(
+                selectedStoreId,
+                product.id
+            );
+
+            await loadInventory();
+        } catch (requestError) {
+            setError(getErrorMessage(requestError));
+        } finally {
+            setRestoringProductId(null);
+        }
+    }
+
     return (
         <div className="dashboard-layout">
             <aside className="sidebar">
@@ -231,6 +280,12 @@ export function Dashboard({
                         <button
                             className="navigation-item active"
                             type="button"
+                            onClick={() =>
+                                window.scrollTo({
+                                    top: 0,
+                                    behavior: "smooth"
+                                })
+                            }
                         >
                             <span>▦</span>
                             Overview
@@ -240,17 +295,31 @@ export function Dashboard({
                             className="navigation-item"
                             type="button"
                             onClick={() =>
-                                document
-                                    .querySelector(
-                                        "#low-stock-section"
-                                    )
-                                    ?.scrollIntoView({
-                                        behavior: "smooth"
-                                    })
+                                scrollToSection(
+                                    "low-stock-section"
+                                )
                             }
                         >
                             <span>!</span>
                             Low stock
+                        </button>
+
+                        <button
+                            className="navigation-item"
+                            type="button"
+                            onClick={() =>
+                                scrollToSection(
+                                    "archived-products-section"
+                                )
+                            }
+                        >
+                            <span>↺</span>
+                            Archived
+                            {archivedProducts.length > 0 && (
+                                <span className="navigation-count">
+                                    {archivedProducts.length}
+                                </span>
+                            )}
                         </button>
                     </nav>
                 </div>
@@ -464,6 +533,10 @@ export function Dashboard({
 
                             <h2>Products</h2>
                         </div>
+
+                        <span className="badge">
+                            {products.length} active
+                        </span>
                     </div>
 
                     {loading ? (
@@ -476,11 +549,11 @@ export function Dashboard({
                                 □
                             </div>
 
-                            <h3>No products yet</h3>
+                            <h3>No active products</h3>
 
                             <p>
-                                Add your first product to begin
-                                tracking inventory.
+                                Add a product or restore one from
+                                the archived-products section.
                             </p>
                         </div>
                     ) : (
@@ -616,6 +689,123 @@ export function Dashboard({
                         </div>
                     )}
                 </section>
+
+                <section
+                    id="archived-products-section"
+                    className="content-card"
+                >
+                    <div className="section-heading">
+                        <div>
+                            <span className="section-kicker">
+                                Product history
+                            </span>
+
+                            <h2>Archived products</h2>
+
+                            <p>
+                                Restore products without losing
+                                their inventory history.
+                            </p>
+                        </div>
+
+                        <span className="badge">
+                            {archivedProducts.length} archived
+                        </span>
+                    </div>
+
+                    {loading ? (
+                        <div className="empty-state">
+                            Loading archived products…
+                        </div>
+                    ) : archivedProducts.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="empty-icon">
+                                ✓
+                            </div>
+
+                            <h3>No archived products</h3>
+
+                            <p>
+                                Archived products will appear here
+                                and can be restored later.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Category</th>
+                                        <th>Last stock</th>
+                                        <th>Barcode</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {archivedProducts.map(product => (
+                                        <tr key={product.id}>
+                                            <td>
+                                                <strong>
+                                                    {product.name}
+                                                </strong>
+
+                                                <span>
+                                                    {product.brand
+                                                        ?? "No brand"}
+                                                </span>
+                                            </td>
+
+                                            <td>
+                                                {product.category
+                                                    ?? "Uncategorized"}
+                                            </td>
+
+                                            <td>
+                                                {product.quantity}
+                                            </td>
+
+                                            <td>
+                                                {product.barcode}
+                                            </td>
+
+                                            <td>
+                                                <span className="stock-status archived">
+                                                    Archived
+                                                </span>
+                                            </td>
+
+                                            <td>
+                                                <button
+                                                    className="button secondary compact"
+                                                    type="button"
+                                                    disabled={
+                                                        restoringProductId
+                                                        === product.id
+                                                    }
+                                                    onClick={() =>
+                                                        void restoreProduct(
+                                                            product
+                                                        )
+                                                    }
+                                                >
+                                                    {
+                                                        restoringProductId
+                                                        === product.id
+                                                            ? "Restoring..."
+                                                            : "Restore"
+                                                    }
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </section>
             </main>
 
             {productDialogOpen
@@ -677,6 +867,14 @@ function StatCard({
             <small>{description}</small>
         </article>
     );
+}
+
+function scrollToSection(sectionId: string) {
+    document
+        .getElementById(sectionId)
+        ?.scrollIntoView({
+            behavior: "smooth"
+        });
 }
 
 function getInitials(account: Account): string {

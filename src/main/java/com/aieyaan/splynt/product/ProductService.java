@@ -1,6 +1,7 @@
 package com.aieyaan.splynt.product;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,23 @@ public class ProductService {
                 storeId,
                 barcode)) {
 
+            Optional<Product> existingProduct =
+                    productRepository.findByStoreIdAndBarcode(
+                            storeId,
+                            barcode
+                    );
+
+            if (existingProduct.isPresent()
+                    && !existingProduct.get().isActive()) {
+
+                throw new DuplicateProductException(
+                        "An archived product with barcode "
+                                + barcode
+                                + " already exists. Restore the "
+                                + "archived product instead."
+                );
+            }
+
             throw new DuplicateProductException(
                     "A product with barcode "
                             + barcode
@@ -73,6 +91,17 @@ public class ProductService {
 
         return productRepository
                 .findAllByStoreIdAndActiveTrueOrderByNameAsc(storeId)
+                .stream()
+                .map(ProductResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> getArchivedProducts(Long storeId) {
+        getActiveStore(storeId);
+
+        return productRepository
+                .findAllByStoreIdAndActiveFalseOrderByNameAsc(storeId)
                 .stream()
                 .map(ProductResponse::from)
                 .toList();
@@ -140,6 +169,29 @@ public class ProductService {
         );
 
         product.setActive(false);
+    }
+
+    @Transactional
+    public ProductResponse restoreProduct(
+            Long storeId,
+            Long productId) {
+
+        getActiveStore(storeId);
+
+        Product product = productRepository
+                .findByStoreIdAndId(storeId, productId)
+                .filter(existingProduct ->
+                        !existingProduct.isActive())
+                .orElseThrow(() -> new ProductNotFoundException(
+                        "Archived product with ID "
+                                + productId
+                                + " was not found in store "
+                                + storeId
+                ));
+
+        product.setActive(true);
+
+        return ProductResponse.from(product);
     }
 
     private Product getActiveProduct(
