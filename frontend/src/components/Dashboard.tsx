@@ -1,4 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState
+} from "react";
+
+import {
+    InventoryDialog
+} from "./InventoryDialog";
+
+import type {
+    InventoryOperation
+} from "./InventoryDialog";
+
+import {
+    ProductDialog
+} from "./ProductDialog";
 
 import {
     clearAccessToken,
@@ -20,6 +37,11 @@ interface DashboardProps {
 interface StoreAccess extends StoreSummary {
     organizationName: string;
     role: MembershipRole;
+}
+
+interface InventorySelection {
+    product: Product;
+    operation: InventoryOperation;
 }
 
 export function Dashboard({
@@ -51,48 +73,54 @@ export function Dashboard({
         useState<number | null>(initialStore?.id ?? null);
 
     const [products, setProducts] = useState<Product[]>([]);
+
     const [lowStockProducts, setLowStockProducts] =
         useState<Product[]>([]);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    const [productDialogOpen, setProductDialogOpen] =
+        useState(false);
+
+    const [inventorySelection, setInventorySelection] =
+        useState<InventorySelection | null>(null);
+
+    const [archivingProductId, setArchivingProductId] =
+        useState<number | null>(null);
+
     const selectedStore =
         storeAccesses.find(
             store => store.id === selectedStoreId
         ) ?? null;
 
-    useEffect(() => {
+    const loadInventory = useCallback(async () => {
         if (selectedStoreId === null) {
             return;
         }
 
-        let cancelled = false;
+        setLoading(true);
+        setError("");
 
-        async function loadInventory() {
-            setLoading(true);
-            setError("");
+        try {
+            const [allProducts, lowStock] =
+                await Promise.all([
+                    productApi.getAll(selectedStoreId),
+                    productApi.getLowStock(selectedStoreId)
+                ]);
 
-            try {
-                const [allProducts, lowStock] =
-                    await Promise.all([
-                        productApi.getAll(selectedStoreId!),
-                        productApi.getLowStock(selectedStoreId!)
-                    ]);
+            setProducts(allProducts);
+            setLowStockProducts(lowStock);
+        } catch (requestError) {
+            setError(getErrorMessage(requestError));
+        } finally {
+            setLoading(false);
+        }
+    }, [selectedStoreId]);
 
-                if (!cancelled) {
-                    setProducts(allProducts);
-                    setLowStockProducts(lowStock);
-                }
-            } catch (requestError) {
-                if (!cancelled) {
-                    setError(getErrorMessage(requestError));
-                }
-            } finally {
-                if (!cancelled) {
-                    setLoading(false);
-                }
-            }
+    useEffect(() => {
+        if (selectedStoreId === null) {
+            return;
         }
 
         sessionStorage.setItem(
@@ -101,11 +129,7 @@ export function Dashboard({
         );
 
         void loadInventory();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [selectedStoreId]);
+    }, [selectedStoreId, loadInventory]);
 
     const totalUnits = products.reduce(
         (sum, product) => sum + product.quantity,
@@ -125,6 +149,48 @@ export function Dashboard({
         onLogout();
     }
 
+    function openInventoryDialog(
+        product: Product,
+        operation: InventoryOperation
+    ) {
+        setInventorySelection({
+            product,
+            operation
+        });
+    }
+
+    async function archiveProduct(product: Product) {
+        if (selectedStoreId === null) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Archive "${product.name}"?\n\n`
+            + "It will disappear from the active catalog, "
+            + "but its inventory history will be preserved."
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setArchivingProductId(product.id);
+        setError("");
+
+        try {
+            await productApi.archive(
+                selectedStoreId,
+                product.id
+            );
+
+            await loadInventory();
+        } catch (requestError) {
+            setError(getErrorMessage(requestError));
+        } finally {
+            setArchivingProductId(null);
+        }
+    }
+
     return (
         <div className="dashboard-layout">
             <aside className="sidebar">
@@ -140,6 +206,7 @@ export function Dashboard({
 
                     <label className="store-picker">
                         Active store
+
                         <select
                             value={selectedStoreId ?? ""}
                             disabled={storeAccesses.length === 0}
@@ -195,6 +262,7 @@ export function Dashboard({
 
                     <div className="account-copy">
                         <strong>{account.fullName}</strong>
+
                         <span>
                             {selectedStore?.role ?? "NO STORE"}
                         </span>
@@ -236,31 +304,25 @@ export function Dashboard({
                             className="button secondary"
                             type="button"
                             disabled={
-                                selectedStoreId === null || loading
+                                selectedStoreId === null
+                                || loading
                             }
                             onClick={() =>
-                                setSelectedStoreId(current => {
-                                    if (current === null) {
-                                        return null;
-                                    }
-
-                                    setSelectedStoreId(null);
-
-                                    window.setTimeout(() => {
-                                        setSelectedStoreId(current);
-                                    });
-
-                                    return null;
-                                })
+                                void loadInventory()
                             }
                         >
-                            {loading ? "Refreshing..." : "Refresh"}
+                            {loading
+                                ? "Refreshing..."
+                                : "Refresh"}
                         </button>
 
                         <button
                             className="button primary"
                             type="button"
                             disabled={selectedStoreId === null}
+                            onClick={() =>
+                                setProductDialogOpen(true)
+                            }
                         >
                             + Add product
                         </button>
@@ -282,7 +344,9 @@ export function Dashboard({
 
                     <StatCard
                         label="Low-stock products"
-                        value={lowStockProducts.length.toLocaleString()}
+                        value={
+                            lowStockProducts.length.toLocaleString()
+                        }
                         description="Require attention"
                         warning
                     />
@@ -312,7 +376,10 @@ export function Dashboard({
                             <span className="section-kicker">
                                 Attention needed
                             </span>
-                            <h2>Low-stock recommendations</h2>
+
+                            <h2>
+                                Low-stock recommendations
+                            </h2>
                         </div>
 
                         <span className="badge warning-badge">
@@ -329,8 +396,14 @@ export function Dashboard({
                         </div>
                     ) : lowStockProducts.length === 0 ? (
                         <div className="empty-state">
-                            <div className="empty-icon">✓</div>
-                            <h3>Stock levels look healthy</h3>
+                            <div className="empty-icon">
+                                ✓
+                            </div>
+
+                            <h3>
+                                Stock levels look healthy
+                            </h3>
+
                             <p>
                                 No products currently require
                                 reordering.
@@ -357,6 +430,7 @@ export function Dashboard({
                                             <strong>
                                                 {product.quantity}
                                             </strong>
+
                                             <span>
                                                 units remaining
                                             </span>
@@ -369,6 +443,7 @@ export function Dashboard({
                                                         .suggestedReorderQuantity
                                                 }
                                             </strong>
+
                                             <span>
                                                 suggested reorder
                                             </span>
@@ -386,6 +461,7 @@ export function Dashboard({
                             <span className="section-kicker">
                                 Store catalog
                             </span>
+
                             <h2>Products</h2>
                         </div>
                     </div>
@@ -396,8 +472,12 @@ export function Dashboard({
                         </div>
                     ) : products.length === 0 ? (
                         <div className="empty-state">
-                            <div className="empty-icon">□</div>
+                            <div className="empty-icon">
+                                □
+                            </div>
+
                             <h3>No products yet</h3>
+
                             <p>
                                 Add your first product to begin
                                 tracking inventory.
@@ -414,6 +494,7 @@ export function Dashboard({
                                         <th>Reorder at</th>
                                         <th>Unit cost</th>
                                         <th>Status</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
 
@@ -424,6 +505,7 @@ export function Dashboard({
                                                 <strong>
                                                     {product.name}
                                                 </strong>
+
                                                 <span>
                                                     {product.brand
                                                         ?? "No brand"}
@@ -437,14 +519,20 @@ export function Dashboard({
                                                     ?? "Uncategorized"}
                                             </td>
 
-                                            <td>{product.quantity}</td>
-
                                             <td>
-                                                {product.reorderLevel}
+                                                {product.quantity}
                                             </td>
 
                                             <td>
-                                                {product.unitCost === null
+                                                {
+                                                    product
+                                                        .reorderLevel
+                                                }
+                                            </td>
+
+                                            <td>
+                                                {product.unitCost ===
+                                                null
                                                     ? "—"
                                                     : formatCurrency(
                                                         product.unitCost,
@@ -466,6 +554,61 @@ export function Dashboard({
                                                         : "Healthy"}
                                                 </span>
                                             </td>
+
+                                            <td>
+                                                <div className="table-actions">
+                                                    <button
+                                                        className="button secondary compact"
+                                                        type="button"
+                                                        disabled={
+                                                            product.quantity
+                                                            <= 0
+                                                        }
+                                                        onClick={() =>
+                                                            openInventoryDialog(
+                                                                product,
+                                                                "sale"
+                                                            )
+                                                        }
+                                                    >
+                                                        Sale
+                                                    </button>
+
+                                                    <button
+                                                        className="button secondary compact"
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openInventoryDialog(
+                                                                product,
+                                                                "restock"
+                                                            )
+                                                        }
+                                                    >
+                                                        Restock
+                                                    </button>
+
+                                                    <button
+                                                        className="button danger compact"
+                                                        type="button"
+                                                        disabled={
+                                                            archivingProductId
+                                                            === product.id
+                                                        }
+                                                        onClick={() =>
+                                                            void archiveProduct(
+                                                                product
+                                                            )
+                                                        }
+                                                    >
+                                                        {
+                                                            archivingProductId
+                                                            === product.id
+                                                                ? "Archiving..."
+                                                                : "Archive"
+                                                        }
+                                                    </button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -474,6 +617,36 @@ export function Dashboard({
                     )}
                 </section>
             </main>
+
+            {productDialogOpen
+                && selectedStoreId !== null && (
+                <ProductDialog
+                    storeId={selectedStoreId}
+                    onClose={() =>
+                        setProductDialogOpen(false)
+                    }
+                    onSaved={async () => {
+                        await loadInventory();
+                    }}
+                />
+            )}
+
+            {inventorySelection
+                && selectedStoreId !== null && (
+                <InventoryDialog
+                    storeId={selectedStoreId}
+                    product={inventorySelection.product}
+                    operation={
+                        inventorySelection.operation
+                    }
+                    onClose={() =>
+                        setInventorySelection(null)
+                    }
+                    onSaved={async () => {
+                        await loadInventory();
+                    }}
+                />
+            )}
         </div>
     );
 }

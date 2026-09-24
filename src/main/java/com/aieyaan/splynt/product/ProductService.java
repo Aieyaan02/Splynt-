@@ -83,17 +83,10 @@ public class ProductService {
             Long storeId,
             Long productId) {
 
-        getActiveStore(storeId);
-
-        Product product = productRepository
-                .findByStoreIdAndId(storeId, productId)
-                .filter(Product::isActive)
-                .orElseThrow(() -> new ProductNotFoundException(
-                        "Product with ID "
-                                + productId
-                                + " was not found in store "
-                                + storeId
-                ));
+        Product product = getActiveProduct(
+                storeId,
+                productId
+        );
 
         return ProductResponse.from(product);
     }
@@ -134,6 +127,36 @@ public class ProductService {
                 .stream()
                 .map(ProductResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public void archiveProduct(
+            Long storeId,
+            Long productId) {
+
+        Product product = getActiveProduct(
+                storeId,
+                productId
+        );
+
+        product.setActive(false);
+    }
+
+    private Product getActiveProduct(
+            Long storeId,
+            Long productId) {
+
+        getActiveStore(storeId);
+
+        return productRepository
+                .findByStoreIdAndId(storeId, productId)
+                .filter(Product::isActive)
+                .orElseThrow(() -> new ProductNotFoundException(
+                        "Product with ID "
+                                + productId
+                                + " was not found in store "
+                                + storeId
+                ));
     }
 
     private Store getActiveStore(Long storeId) {

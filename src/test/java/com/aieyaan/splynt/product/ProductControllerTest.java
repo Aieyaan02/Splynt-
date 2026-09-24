@@ -2,7 +2,9 @@ package com.aieyaan.splynt.product;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -238,5 +240,52 @@ class ProductControllerTest {
                                                 + "was not found"
                                 )
                 );
+    }
+
+    @Test
+    void archivesProductAndReturnsNoContent()
+            throws Exception {
+
+        mockMvc.perform(
+                        delete(
+                                "/api/stores/10/products/25"
+                        )
+                )
+                .andExpect(status().isNoContent());
+
+        verify(productService)
+                .archiveProduct(10L, 25L);
+    }
+
+    @Test
+    void returnsNotFoundWhenArchivingMissingProduct()
+            throws Exception {
+
+        whenArchiveMissingProduct();
+
+        mockMvc.perform(
+                        delete(
+                                "/api/stores/10/products/999"
+                        )
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(
+                        jsonPath("$.message").value(
+                                "Product with ID 999 "
+                                        + "was not found in store 10"
+                        )
+                );
+    }
+
+    private void whenArchiveMissingProduct() {
+        org.mockito.Mockito.doThrow(
+                        new ProductNotFoundException(
+                                "Product with ID 999 "
+                                        + "was not found in store 10"
+                        )
+                )
+                .when(productService)
+                .archiveProduct(10L, 999L);
     }
 }

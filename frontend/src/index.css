@@ -740,3 +740,104 @@ td span {
       padding: 18px;
   }
 }
+textarea {
+  width: 100%;
+  padding: 12px 13px;
+  color: var(--text);
+  background: #ffffff;
+  border: 1px solid #cad6d0;
+  border-radius: 10px;
+  font: inherit;
+  outline: none;
+  resize: vertical;
+  transition: 160ms ease;
+}
+
+textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(23, 107, 77, 0.11);
+}
+
+.modal {
+  width: min(92vw, 720px);
+  padding: 0;
+  color: var(--text);
+  background: #ffffff;
+  border: 0;
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+
+.compact-modal {
+  width: min(92vw, 500px);
+}
+
+.modal::backdrop {
+  background: rgba(8, 24, 17, 0.58);
+  backdrop-filter: blur(3px);
+}
+
+.modal-form {
+  display: grid;
+  padding: 28px;
+  gap: 19px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  letter-spacing: -0.035em;
+}
+
+.modal-header p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.modal-close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--muted);
+  background: var(--surface-muted);
+  border: 0;
+  border-radius: 9px;
+  font-size: 22px;
+}
+
+.modal-close:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.modal-actions {
+  display: flex;
+  padding-top: 5px;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.table-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.button.compact {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 10px;
+}

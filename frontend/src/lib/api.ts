@@ -170,6 +170,18 @@ export const productApi = {
                 body: JSON.stringify(requestBody)
             }
         );
+    },
+
+    archive(
+        storeId: number,
+        productId: number
+    ): Promise<void> {
+        return request<void>(
+            `/api/stores/${storeId}/products/${productId}`,
+            {
+                method: "DELETE"
+            }
+        );
     }
 };
 

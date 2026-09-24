@@ -88,10 +88,12 @@ class ProductServiceTest {
         Product savedProduct = productCaptor.getValue();
 
         assertSame(store, savedProduct.getStore());
+
         assertEquals(
                 "Example Brand",
                 savedProduct.getBrand()
         );
+
         assertEquals(
                 "Beverages",
                 savedProduct.getCategory()
@@ -199,6 +201,50 @@ class ProductServiceTest {
 
         assertEquals(
                 "Product with ID 999 was not found in store 10",
+                exception.getMessage()
+        );
+    }
+
+    @Test
+    void archivesActiveProductInsideStore() {
+        activeStore(10L);
+
+        Product product = mock(Product.class);
+
+        when(productRepository.findByStoreIdAndId(
+                10L,
+                25L
+        )).thenReturn(Optional.of(product));
+
+        when(product.isActive()).thenReturn(true);
+
+        productService.archiveProduct(10L, 25L);
+
+        verify(productRepository)
+                .findByStoreIdAndId(10L, 25L);
+
+        verify(product).setActive(false);
+    }
+
+    @Test
+    void doesNotArchiveProductOutsideRequestedStore() {
+        activeStore(10L);
+
+        when(productRepository.findByStoreIdAndId(
+                10L,
+                25L
+        )).thenReturn(Optional.empty());
+
+        ProductNotFoundException exception = assertThrows(
+                ProductNotFoundException.class,
+                () -> productService.archiveProduct(
+                        10L,
+                        25L
+                )
+        );
+
+        assertEquals(
+                "Product with ID 25 was not found in store 10",
                 exception.getMessage()
         );
     }
