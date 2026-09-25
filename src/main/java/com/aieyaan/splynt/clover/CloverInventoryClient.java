@@ -11,10 +11,11 @@ import tools.jackson.databind.JsonNode;
 public class CloverInventoryClient {
 
     private final RestClient restClient;
+    private final CloverTokenService tokenService;
     private final String merchantId;
-    private final String accessToken;
 
     public CloverInventoryClient(
+            CloverTokenService tokenService,
             @Value(
                     "${splynt.integrations.clover.base-url:"
                             + "https://apisandbox.dev.clover.com}"
@@ -23,11 +24,9 @@ public class CloverInventoryClient {
             @Value(
                     "${splynt.integrations.clover.merchant-id:}"
             )
-            String merchantId,
-            @Value(
-                    "${splynt.integrations.clover.access-token:}"
-            )
-            String accessToken) {
+            String merchantId) {
+
+        this.tokenService = tokenService;
 
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
@@ -36,7 +35,6 @@ public class CloverInventoryClient {
                 .build();
 
         this.merchantId = merchantId;
-        this.accessToken = accessToken;
     }
 
     public JsonNode getItems() {
@@ -60,32 +58,57 @@ public class CloverInventoryClient {
     }
 
     private JsonNode executeGet(String uri) {
+        String accessToken = tokenService.getAccessToken();
+
         try {
-            return restClient.get()
-                    .uri(uri, merchantId)
-                    .headers(headers -> headers.setBearerAuth(accessToken))
-                    .retrieve()
-                    .body(JsonNode.class);
+            return executeGetWithToken(uri, accessToken);
         } catch (RestClientResponseException exception) {
-            throw new IllegalStateException(
-                    "Clover returned HTTP "
-                            + exception.getStatusCode().value()
-                            + " while synchronizing inventory",
-                    exception
-            );
+            if (exception.getStatusCode().value() != 401) {
+                throw translateException(exception);
+            }
+
+            String refreshedAccessToken =
+                    tokenService.refreshAccessToken(accessToken);
+
+            try {
+                return executeGetWithToken(
+                        uri,
+                        refreshedAccessToken
+                );
+            } catch (RestClientResponseException retryException) {
+                throw translateException(retryException);
+            }
         }
+    }
+
+    private JsonNode executeGetWithToken(
+            String uri,
+            String accessToken) {
+
+        return restClient.get()
+                .uri(uri, merchantId)
+                .headers(headers ->
+                        headers.setBearerAuth(accessToken)
+                )
+                .retrieve()
+                .body(JsonNode.class);
+    }
+
+    private IllegalStateException translateException(
+            RestClientResponseException exception) {
+
+        return new IllegalStateException(
+                "Clover returned HTTP "
+                        + exception.getStatusCode().value()
+                        + " while synchronizing inventory",
+                exception
+        );
     }
 
     private void validateConfiguration() {
         if (merchantId == null || merchantId.isBlank()) {
             throw new IllegalStateException(
                     "Clover merchant ID is not configured"
-            );
-        }
-
-        if (accessToken == null || accessToken.isBlank()) {
-            throw new IllegalStateException(
-                    "Clover access token is not configured"
             );
         }
     }
