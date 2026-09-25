@@ -1,3 +1,4 @@
+import { CloverAutoSync } from "./CloverAutoSync";
 import {
     useCallback,
     useEffect,
@@ -367,6 +368,11 @@ export function Dashboard({
                                 : "Create a store to begin."}
                         </p>
                     </div>
+
+                    <CloverAutoSync
+                        storeId={selectedStoreId}
+                        onSynchronized={loadInventory}
+                    />
 
                     <div className="header-actions">
                         <button
