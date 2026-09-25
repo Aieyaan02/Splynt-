@@ -60,6 +60,16 @@ public class SecurityConfig {
                         .permitAll()
 
                         /*
+                         * Clover must access this endpoint before a Splynt
+                         * JWT exists.
+                         */
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/integrations/clover/connect"
+                        )
+                        .permitAll()
+
+                        /*
                          * Health checks are used by Docker and AWS.
                          * Swagger remains accessible during development.
                          */
