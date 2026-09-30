@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -146,6 +147,15 @@ public class GlobalExceptionHandler {
                 request.getRequestURI(),
                 validationErrors
         );
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleConcurrentUpdate(
+            OptimisticLockingFailureException exception,
+            HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT,
+                "Inventory changed while you were working. Refresh and try again.",
+                request.getRequestURI(), Map.of());
     }
 
     private ResponseEntity<ApiErrorResponse> buildResponse(
