@@ -22,3 +22,14 @@ Build a usable retail inventory SaaS: signup, connect a merchant's own Clover st
 - Existing OAuth callback only displays text; global merchant credentials must be replaced.
 - Existing sync has no audit records or pagination; can overwrite manual stock and restore archives.
 - Existing backend tests present; Java 26, Node and Docker CLI available locally.
+- Added optimistic versioning with a database migration and a database-backed stale-write regression test.
+- Sync records stock deltas as Clover adjustments (not sales), preserves archives, and skips unknown/unsupported quantities without erasing stock.
+- Baseline tests and targeted concurrency/sync regression tests passed. Full post-change suite pending below.
+
+## Next implementation steps
+1. Replace global Clover token/merchant configuration with per-store connections. Implement OAuth initiation, hashed one-time state, code exchange and merchant verification; restrict setup to owner/admin.
+2. Add pagination, background jobs, durable connection health and initial-sync onboarding. Tests must cover two merchants/stores and failed OAuth/replayed state.
+3. Update product APIs, public site, signup/connect flow and responsive dashboard. Keep site in the existing app/repository; no Sites production publishing.
+4. Implement sales event ingestion/insight foundation, docs, CI, end-to-end browser tests and staging instructions.
+
+Development checkout: work/splynt under this chat. Logs are in its parent work directory. No Render settings or production resources have been modified.

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.aieyaan.splynt.clover.dto.CloverSyncResponse;
 import com.aieyaan.splynt.product.Product;
+import com.aieyaan.splynt.inventory.*;
 import com.aieyaan.splynt.product.ProductRepository;
 import com.aieyaan.splynt.product.ProductSource;
 import com.aieyaan.splynt.tenant.Store;
@@ -25,15 +26,18 @@ public class CloverInventorySyncService {
     private final CloverInventoryClient cloverClient;
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
+    private final InventoryMovementRepository movements;
 
     public CloverInventorySyncService(
             CloverInventoryClient cloverClient,
             ProductRepository productRepository,
-            StoreRepository storeRepository) {
+            StoreRepository storeRepository,
+            InventoryMovementRepository movements) {
 
         this.cloverClient = cloverClient;
         this.productRepository = productRepository;
         this.storeRepository = storeRepository;
+        this.movements = movements;
     }
 
     @Transactional
@@ -87,10 +91,12 @@ public class CloverInventorySyncService {
                 barcode = "CLOVER-" + cloverItemId;
             }
 
-            int quantity = quantities.getOrDefault(
-                    cloverItemId,
-                    0
-            );
+            // An absent stock record is unknown, never evidence of zero stock.
+            Integer quantity = quantities.get(cloverItemId);
+            if (quantity == null) {
+                skipped++;
+                continue;
+            }
 
             Optional<Product> existingProduct =
                     productRepository.findByStoreIdAndCloverItemId(
@@ -107,6 +113,10 @@ public class CloverInventorySyncService {
             }
 
             if (existingProduct.isPresent()) {
+                if (!existingProduct.get().isActive()) {
+                    skipped++;
+                    continue;
+                }
                 updateExistingProduct(
                         existingProduct.get(),
                         cloverItemId,
@@ -134,6 +144,9 @@ public class CloverInventorySyncService {
 
             product.setCloverItemId(cloverItemId);
             productRepository.save(product);
+            if (quantity > 0) {
+                recordReconciliation(product, 0, quantity);
+            }
             created++;
         }
 
@@ -154,7 +167,7 @@ public class CloverInventorySyncService {
         JsonNode stocks = stocksResponse.path("elements");
 
         if (!stocks.isArray()) {
-            return quantities;
+            throw new IllegalStateException("Clover returned an invalid stock response");
         }
 
         for (JsonNode stockNode : stocks) {
@@ -167,12 +180,18 @@ public class CloverInventorySyncService {
                 continue;
             }
 
-            int quantity = Math.max(
-                    stockNode.path("quantity").asInt(0),
-                    0
-            );
-
-            quantities.put(itemId, quantity);
+            JsonNode value = stockNode.get("quantity");
+            if (value == null || !value.isNumber()) {
+                continue;
+            }
+            // Whole-unit inventory only: never silently round weighed goods or negative stock.
+            java.math.BigDecimal amount = value.decimalValue();
+            try {
+                int quantity = amount.intValueExact();
+                if (quantity >= 0) quantities.put(itemId, quantity);
+            } catch (ArithmeticException unsupportedQuantity) {
+                // Returned in the skipped count for the connection status.
+            }
         }
 
         return quantities;
@@ -189,7 +208,6 @@ public class CloverInventorySyncService {
         product.setBarcode(barcode);
         product.setName(name);
         product.setSource(ProductSource.CLOVER);
-        product.setActive(true);
 
         synchronizeQuantity(product, newQuantity);
 
@@ -208,6 +226,15 @@ public class CloverInventorySyncService {
         } else if (difference < 0) {
             product.recordSale(Math.abs(difference));
         }
+        if (difference != 0) {
+            recordReconciliation(product, currentQuantity, newQuantity);
+        }
+    }
+
+    private void recordReconciliation(Product product, int before, int after) {
+        movements.save(new InventoryMovement(product, InventoryMovementType.ADJUSTMENT,
+                after - before, before, after, InventoryMovementSource.CLOVER,
+                "Stock reconciled from Clover", product.getCloverItemId()));
     }
 
     private String textValue(
