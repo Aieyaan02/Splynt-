@@ -12,7 +12,7 @@ public class CloverInventoryClient {
 
     private final RestClient restClient;
     private final CloverTokenService tokenService;
-    private final String merchantId;
+
 
     public CloverInventoryClient(
             CloverTokenService tokenService,
@@ -20,59 +20,66 @@ public class CloverInventoryClient {
                     "${splynt.integrations.clover.base-url:"
                             + "https://apisandbox.dev.clover.com}"
             )
-            String baseUrl,
-            @Value(
-                    "${splynt.integrations.clover.merchant-id:}"
-            )
-            String merchantId) {
+            String baseUrl) {
 
         this.tokenService = tokenService;
 
-        this.restClient = RestClient.builder()
-                .baseUrl(baseUrl)
-                .defaultHeader("Accept", "application/json")
-                .defaultHeader("User-Agent", "Splynt/0.1")
-                .build();
-
-        this.merchantId = merchantId;
+        this.restClient = CloverTokenService.httpClient(baseUrl);
     }
 
-    public JsonNode getItems() {
-        validateConfiguration();
-
-        return executeGet(
-                "/v3/merchants/{merchantId}/items?limit=1000"
+    public JsonNode getItems(Long storeId) {
+        return getAllPages(storeId,
+                "/v3/merchants/{merchantId}/items"
         );
     }
 
-    public JsonNode getItemStocks() {
-        validateConfiguration();
-
-        return executeGet(
-                "/v3/merchants/{merchantId}/item_stocks?limit=1000"
+    public JsonNode getItemStocks(Long storeId) {
+        return getAllPages(storeId,
+                "/v3/merchants/{merchantId}/item_stocks"
         );
     }
 
-    public String getMerchantId() {
-        return merchantId;
+    private JsonNode getAllPages(Long storeId, String path) {
+        var result = new tools.jackson.databind.json.JsonMapper().createObjectNode();
+        var elements = result.putArray("elements");
+        var seen = new java.util.HashSet<String>();
+        final int pageSize = 100;
+        for (int offset = 0; offset < 1_000_000; offset += pageSize) {
+            JsonNode response = executeGet(storeId, path + "?limit=" + pageSize + "&offset=" + offset);
+            if (response == null || !response.path("elements").isArray())
+                throw new IllegalStateException("Clover returned an invalid inventory page");
+            JsonNode page = response.path("elements");
+            for (JsonNode element : page) {
+                String id = element.path("id").asText(element.path("item").path("id").asText(null));
+                if (id != null && !seen.add(id))
+                    throw new IllegalStateException("Clover inventory changed during pagination. Retry synchronization.");
+                elements.add(element);
+            }
+            if (page.size() < pageSize) return result;
+        }
+        throw new IllegalStateException("Clover inventory exceeded the supported import size");
     }
 
-    private JsonNode executeGet(String uri) {
-        String accessToken = tokenService.getAccessToken();
+    public String getMerchantId(Long storeId) {
+        return tokenService.getMerchantId(storeId);
+    }
+
+    private JsonNode executeGet(Long storeId, String uri) {
+        String accessToken = tokenService.getAccessToken(storeId);
 
         try {
-            return executeGetWithToken(uri, accessToken);
+            return executeGetWithToken(storeId, uri, accessToken);
         } catch (RestClientResponseException exception) {
             if (exception.getStatusCode().value() != 401) {
                 throw translateException(exception);
             }
 
             String refreshedAccessToken =
-                    tokenService.refreshAccessToken(accessToken);
+                    tokenService.refreshAccessToken(storeId, accessToken);
 
             try {
                 return executeGetWithToken(
-                        uri,
+                        storeId, uri,
                         refreshedAccessToken
                 );
             } catch (RestClientResponseException retryException) {
@@ -82,11 +89,11 @@ public class CloverInventoryClient {
     }
 
     private JsonNode executeGetWithToken(
-            String uri,
+            Long storeId, String uri,
             String accessToken) {
 
         return restClient.get()
-                .uri(uri, merchantId)
+                .uri(uri, getMerchantId(storeId))
                 .headers(headers ->
                         headers.setBearerAuth(accessToken)
                 )
@@ -105,11 +112,4 @@ public class CloverInventoryClient {
         );
     }
 
-    private void validateConfiguration() {
-        if (merchantId == null || merchantId.isBlank()) {
-            throw new IllegalStateException(
-                    "Clover merchant ID is not configured"
-            );
-        }
-    }
 }

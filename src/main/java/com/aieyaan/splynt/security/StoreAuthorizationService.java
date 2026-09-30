@@ -67,6 +67,21 @@ public class StoreAuthorizationService {
                 .isPresent();
     }
 
+    public boolean canManage(Authentication authentication, Long storeId) {
+        return authentication != null && authentication.isAuthenticated()
+                && canManageUser(extractUserId(authentication), storeId);
+    }
+
+    public boolean canManageUser(Long userId, Long storeId) {
+        if (userId == null || storeId == null) return false;
+        return storeRepository.findById(storeId).filter(Store::isActive)
+                .flatMap(store -> membershipRepository.findByOrganizationIdAndUserIdAndActiveTrue(
+                        store.getOrganization().getId(), userId))
+                .map(membership -> membership.getRole() == com.aieyaan.splynt.tenant.MembershipRole.OWNER
+                        || membership.getRole() == com.aieyaan.splynt.tenant.MembershipRole.ADMIN)
+                .orElse(false);
+    }
+
     private Long extractUserId(
             Authentication authentication) {
 

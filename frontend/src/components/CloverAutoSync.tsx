@@ -1,136 +1,83 @@
-import {
-    useCallback,
-    useEffect,
-    useRef,
-    useState
-} from "react";
-
-import { getAccessToken } from "../lib/api";
+import { useEffect, useRef, useState } from "react";
+import { cloverApi, type CloverConnection } from "../lib/api";
 
 interface CloverAutoSyncProps {
     storeId: number | null;
+    canManage: boolean;
     onSynchronized: () => Promise<void>;
 }
 
-interface ApiErrorResponse {
-    message?: string;
-    error?: string;
-}
-
-const SYNC_INTERVAL_MILLISECONDS = 30_000;
-
-export function CloverAutoSync({
-    storeId,
-    onSynchronized
-}: CloverAutoSyncProps) {
-    const synchronizationInProgress = useRef(false);
-
-    const [synchronizing, setSynchronizing] = useState(false);
-    const [lastSynchronization, setLastSynchronization] =
-        useState<Date | null>(null);
-    const [synchronizationError, setSynchronizationError] =
-        useState<string | null>(null);
-
-    const synchronize = useCallback(async () => {
-        const accessToken = getAccessToken();
-
-        if (
-            storeId === null
-            || accessToken === null
-            || synchronizationInProgress.current
-        ) {
-            return;
-        }
-
-        synchronizationInProgress.current = true;
-        setSynchronizing(true);
-        setSynchronizationError(null);
-
-        try {
-            const response = await fetch(
-                `/api/stores/${storeId}`
-                    + "/integrations/clover/sync",
-                {
-                    method: "POST",
-                    headers: {
-                        Accept: "application/json",
-                        Authorization: `Bearer ${accessToken}`
-                    }
-                }
-            );
-
-            if (!response.ok) {
-                let message =
-                    `Clover synchronization failed (${response.status})`;
-
-                try {
-                    const body =
-                        await response.json() as ApiErrorResponse;
-
-                    message =
-                        body.message
-                        ?? body.error
-                        ?? message;
-                } catch {
-                    // Keep the HTTP status message.
-                }
-
-                throw new Error(message);
-            }
-
-            await onSynchronized();
-            setLastSynchronization(new Date());
-        } catch (error) {
-            setSynchronizationError(
-                error instanceof Error
-                    ? error.message
-                    : "Clover synchronization failed"
-            );
-        } finally {
-            synchronizationInProgress.current = false;
-            setSynchronizing(false);
-        }
-    }, [storeId, onSynchronized]);
+export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAutoSyncProps) {
+    const [connection, setConnection] = useState<CloverConnection | null>(null);
+    const [error, setError] = useState("");
+    const [busy, setBusy] = useState(false);
+    const onRefresh = useRef(onSynchronized);
+    useEffect(() => { onRefresh.current = onSynchronized; }, [onSynchronized]);
 
     useEffect(() => {
-        const initialSynchronization = window.setTimeout(
-            () => void synchronize(),
-            1_000
-        );
-
-        const synchronizationInterval = window.setInterval(
-            () => void synchronize(),
-            SYNC_INTERVAL_MILLISECONDS
-        );
-
-        return () => {
-            window.clearTimeout(initialSynchronization);
-            window.clearInterval(synchronizationInterval);
-        };
-    }, [synchronize]);
-
-    let status = "● Clover auto-sync enabled";
-
-    if (synchronizing) {
-        status = "● Synchronizing Clover inventory…";
-    } else if (synchronizationError !== null) {
-        status = `● Clover sync unavailable: ${synchronizationError}`;
-    } else if (lastSynchronization !== null) {
-        status =
-            "● Clover auto-sync · Updated "
-            + lastSynchronization.toLocaleTimeString(
-                [],
-                {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    second: "2-digit"
+        if (storeId === null) return;
+        let cancelled = false;
+        let lastSeen: string | null = null;
+        async function refresh() {
+            try {
+                const result = await cloverApi.status(storeId!);
+                if (cancelled) return;
+                setConnection(result);
+                setError("");
+                if (result.lastSyncedAt && result.lastSyncedAt !== lastSeen) {
+                    lastSeen = result.lastSyncedAt;
+                    await onRefresh.current();
                 }
-            );
+            } catch (failure) {
+                if (!cancelled) setError(failure instanceof Error ? failure.message : "Unable to check Clover connection.");
+            }
+        }
+        void refresh();
+        const interval = window.setInterval(() => void refresh(), 10_000);
+        return () => { cancelled = true; window.clearInterval(interval); };
+    }, [storeId]);
+
+    async function connect() {
+        if (storeId === null) return;
+        setBusy(true); setError("");
+        try {
+            const result = await cloverApi.connect(storeId);
+            window.location.assign(result.authorizationUrl);
+        } catch (failure) {
+            setError(failure instanceof Error ? failure.message : "Unable to connect Clover.");
+            setBusy(false);
+        }
     }
 
-    return (
+    async function synchronize() {
+        if (storeId === null) return;
+        setBusy(true); setError("");
+        try {
+            await cloverApi.sync(storeId);
+            setConnection(await cloverApi.status(storeId));
+            await onSynchronized();
+        } catch (failure) {
+            setError(failure instanceof Error ? failure.message : "Unable to sync inventory.");
+        } finally { setBusy(false); }
+    }
+
+    if (storeId === null) return null;
+    return <div className="clover-connection" aria-live="polite">
         <p className="clover-sync-status">
-            {status}
+            {connection === null ? "Checking store connection…" : connection.connected
+                ? connection.lastSyncedAt
+                    ? `Clover connected · Updated ${new Date(connection.lastSyncedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                    : "Clover connected · Your first inventory import will begin shortly."
+                : "Connect Clover to bring your inventory into Splynt."}
         </p>
-    );
+        {connection?.connected && <small>Inventory refreshes automatically, even when you close Splynt.</small>}
+        {canManage && <div className="table-actions">
+            <button type="button" className="button secondary compact" disabled={busy || !connection} onClick={() => void connect()}>
+                {busy ? "Working…" : connection?.connected ? "Reconnect Clover" : "Connect Clover"}
+            </button>
+            {connection?.connected && <button type="button" className="button secondary compact" disabled={busy} onClick={() => void synchronize()}>Sync now</button>}
+        </div>}
+        {!canManage && connection && !connection.connected && <small>Ask your store owner or admin to connect Clover.</small>}
+        {(error || connection?.lastSyncError) && <p role="alert" className="message error-message">{error || connection?.lastSyncError}</p>}
+    </div>;
 }

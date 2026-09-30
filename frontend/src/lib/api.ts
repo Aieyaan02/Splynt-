@@ -235,3 +235,21 @@ export const inventoryApi = {
         );
     }
 };
+export interface CloverConnection {
+    connected: boolean;
+    merchantId: string | null;
+    lastSyncedAt: string | null;
+    lastSyncError: string | null;
+}
+
+export const cloverApi = {
+    status(storeId: number): Promise<CloverConnection> {
+        return request(`/api/stores/${storeId}/integrations/clover`);
+    },
+    connect(storeId: number): Promise<{ authorizationUrl: string }> {
+        return request(`/api/stores/${storeId}/integrations/clover/connect`, { method: "POST" });
+    },
+    sync(storeId: number): Promise<unknown> {
+        return request(`/api/stores/${storeId}/integrations/clover/sync`, { method: "POST" });
+    }
+};

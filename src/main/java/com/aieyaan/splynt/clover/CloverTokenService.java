@@ -1,262 +1,80 @@
 package com.aieyaan.splynt.clover;
 
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.util.Map;
-import java.util.Objects;
-
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
-
 import tools.jackson.databind.JsonNode;
 
 @Service
 public class CloverTokenService {
-
-    private final CloverOAuthCredentialRepository credentialRepository;
-    private final RestClient oauthClient;
-    private final TransactionTemplate transactionTemplate;
-
-    private final String merchantId;
+    private final CloverOAuthCredentialRepository credentials;
+    private final CloverTokenCipher cipher;
+    private final RestClient client;
+    private final TransactionTemplate transactions;
     private final String clientId;
-    private final String configuredAccessToken;
-    private final String configuredRefreshToken;
 
-    private final Object refreshMonitor = new Object();
-
-    public CloverTokenService(
-            CloverOAuthCredentialRepository credentialRepository,
+    public CloverTokenService(CloverOAuthCredentialRepository credentials, CloverTokenCipher cipher,
             PlatformTransactionManager transactionManager,
-            @Value(
-                    "${splynt.integrations.clover.base-url:"
-                            + "https://apisandbox.dev.clover.com}"
-            )
-            String baseUrl,
-            @Value(
-                    "${splynt.integrations.clover.merchant-id:}"
-            )
-            String merchantId,
-            @Value(
-                    "${splynt.integrations.clover.client-id:"
-                            + "4731H0NXZ45WP}"
-            )
-            String clientId,
-            @Value(
-                    "${splynt.integrations.clover.access-token:}"
-            )
-            String configuredAccessToken,
-            @Value(
-                    "${splynt.integrations.clover.refresh-token:}"
-            )
-            String configuredRefreshToken) {
-
-        this.credentialRepository = credentialRepository;
-        this.transactionTemplate =
-                new TransactionTemplate(transactionManager);
-
-        this.oauthClient = RestClient.builder()
-                .baseUrl(baseUrl)
-                .defaultHeader("Accept", "application/json")
-                .defaultHeader("User-Agent", "Splynt/0.1")
-                .build();
-
-        this.merchantId = merchantId;
-        this.clientId = clientId;
-        this.configuredAccessToken = configuredAccessToken;
-        this.configuredRefreshToken = configuredRefreshToken;
+            @Value("${splynt.integrations.clover.base-url:https://apisandbox.dev.clover.com}") String baseUrl,
+            @Value("${splynt.integrations.clover.client-id:}") String clientId) {
+        this.credentials = credentials; this.cipher = cipher; this.clientId = clientId;
+        this.transactions = new TransactionTemplate(transactionManager);
+        this.transactions.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.client = httpClient(baseUrl);
     }
 
-    public String getAccessToken() {
-        validateBaseConfiguration();
-
-        return Objects.requireNonNull(
-                transactionTemplate.execute(
-                        status -> findOrInitializeCredential()
-                                .getAccessToken()
-                )
-        );
+    static RestClient httpClient(String baseUrl) {
+        var factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(10));
+        factory.setReadTimeout(Duration.ofSeconds(30));
+        return RestClient.builder().baseUrl(baseUrl).requestFactory(factory)
+                .defaultHeader("Accept", "application/json").defaultHeader("User-Agent", "Splynt/0.2").build();
     }
 
-    public String refreshAccessToken(
-            String rejectedAccessToken) {
-
-        validateBaseConfiguration();
-
-        synchronized (refreshMonitor) {
-            return Objects.requireNonNull(
-                    transactionTemplate.execute(
-                            status -> refreshWithinTransaction(
-                                    rejectedAccessToken
-                            )
-                    )
-            );
+    public String getMerchantId(Long storeId) { return credential(storeId).getMerchantId(); }
+    public String getAccessToken(Long storeId) {
+        CloverOAuthCredential credential = credential(storeId);
+        String token = cipher.decrypt(credential.getAccessToken());
+        if (credential.getAccessTokenExpiresAt() != null
+                && credential.getAccessTokenExpiresAt().isBefore(OffsetDateTime.now().plusSeconds(60))) {
+            return refreshAccessToken(storeId, token);
         }
+        return token;
     }
-
-    private String refreshWithinTransaction(
-            String rejectedAccessToken) {
-
-        CloverOAuthCredential credential =
-                findOrInitializeCredential();
-
-        /*
-         * Another request may already have refreshed the token while
-         * this request waited for the synchronization lock.
-         */
-        if (!credential.getAccessToken().equals(
-                rejectedAccessToken
-        )) {
-            return credential.getAccessToken();
-        }
-
-        JsonNode response;
-
-        try {
-            response = oauthClient.post()
-                    .uri("/oauth/v2/refresh")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of(
-                            "client_id",
-                            clientId,
-                            "refresh_token",
-                            credential.getRefreshToken()
-                    ))
-                    .retrieve()
-                    .body(JsonNode.class);
-        } catch (RestClientResponseException exception) {
-            throw new IllegalStateException(
-                    "Clover token refresh returned HTTP "
-                            + exception.getStatusCode().value(),
-                    exception
-            );
-        }
-
-        if (response == null) {
-            throw new IllegalStateException(
-                    "Clover token refresh returned an empty response"
-            );
-        }
-
-        String newAccessToken = readRequiredText(
-                response,
-                "access_token"
-        );
-        String newRefreshToken = readRequiredText(
-                response,
-                "refresh_token"
-        );
-
-        credential.rotateTokens(
-                newAccessToken,
-                newRefreshToken,
-                readExpiration(
-                        response,
-                        "access_token_expiration"
-                ),
-                readExpiration(
-                        response,
-                        "refresh_token_expiration"
-                )
-        );
-
-        credentialRepository.saveAndFlush(credential);
-
-        return newAccessToken;
+    private CloverOAuthCredential credential(Long storeId) {
+        return credentials.findByStoreId(storeId)
+                .orElseThrow(() -> new IllegalStateException("Connect this store to Clover first"));
     }
-
-    private CloverOAuthCredential findOrInitializeCredential() {
-        return credentialRepository
-                .findByMerchantId(merchantId)
-                .orElseGet(this::createConfiguredCredential);
+    public String refreshAccessToken(Long storeId, String rejectedToken) {
+        // Database lock coordinates rotating single-use refresh tokens across application instances.
+        return transactions.execute(status -> {
+            var credential = credentials.findLockedByStoreId(storeId)
+                    .orElseThrow(() -> new IllegalStateException("Connect this store to Clover first"));
+            String current = cipher.decrypt(credential.getAccessToken());
+            if (!current.equals(rejectedToken)) return current;
+            JsonNode response = client.post().uri("/oauth/v2/refresh").contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("client_id", clientId, "refresh_token", cipher.decrypt(credential.getRefreshToken())))
+                    .retrieve().body(JsonNode.class);
+            String next = requiredText(response, "access_token");
+            credential.rotateTokens(cipher.encrypt(next), cipher.encrypt(requiredText(response, "refresh_token")),
+                    expiration(response, "access_token_expiration"), expiration(response, "refresh_token_expiration"));
+            credentials.saveAndFlush(credential);
+            return next;
+        });
     }
-
-    private CloverOAuthCredential createConfiguredCredential() {
-        if (configuredAccessToken == null
-                || configuredAccessToken.isBlank()) {
-
-            throw new IllegalStateException(
-                    "Clover access token is not configured"
-            );
-        }
-
-        if (configuredRefreshToken == null
-                || configuredRefreshToken.isBlank()) {
-
-            throw new IllegalStateException(
-                    "Clover refresh token is not configured"
-            );
-        }
-
-        CloverOAuthCredential credential =
-                new CloverOAuthCredential(
-                        merchantId,
-                        configuredAccessToken,
-                        configuredRefreshToken,
-                        null,
-                        null
-                );
-
-        return credentialRepository.saveAndFlush(credential);
+    static String requiredText(JsonNode response, String field) {
+        if (response == null || !response.path(field).isTextual() || response.path(field).asText().isBlank())
+            throw new IllegalStateException("Clover returned an incomplete authorization response");
+        return response.path(field).asText();
     }
-
-    private void validateBaseConfiguration() {
-        if (merchantId == null || merchantId.isBlank()) {
-            throw new IllegalStateException(
-                    "Clover merchant ID is not configured"
-            );
-        }
-
-        if (clientId == null || clientId.isBlank()) {
-            throw new IllegalStateException(
-                    "Clover client ID is not configured"
-            );
-        }
-    }
-
-    private String readRequiredText(
-            JsonNode response,
-            String fieldName) {
-
-        JsonNode value = response.get(fieldName);
-
-        if (value == null
-                || value.isNull()
-                || value.asText().isBlank()) {
-
-            throw new IllegalStateException(
-                    "Clover token refresh did not return "
-                            + fieldName
-            );
-        }
-
-        return value.asText();
-    }
-
-    private OffsetDateTime readExpiration(
-            JsonNode response,
-            String fieldName) {
-
-        JsonNode value = response.get(fieldName);
-
-        if (value == null || value.isNull()) {
-            return null;
-        }
-
-        long epochSeconds = value.asLong();
-
-        if (epochSeconds <= 0) {
-            return null;
-        }
-
-        return OffsetDateTime.ofInstant(
-                Instant.ofEpochSecond(epochSeconds),
-                ZoneOffset.UTC
-        );
+    static OffsetDateTime expiration(JsonNode response, String field) {
+        long epoch = response.path(field).asLong(0);
+        return epoch <= 0 ? null : OffsetDateTime.ofInstant(Instant.ofEpochSecond(epoch), ZoneOffset.UTC);
     }
 }

@@ -13,15 +13,15 @@ import com.aieyaan.splynt.clover.dto.CloverSyncResponse;
         "/api/stores/{storeId}/integrations/clover"
 )
 @PreAuthorize(
-        "@storeAuthorizationService.canAccess("
+        "@storeAuthorizationService.canManage("
                 + "authentication, #storeId)"
 )
 public class CloverInventoryController {
 
-    private final CloverInventorySyncService syncService;
+    private final CloverSyncJobs syncService;
 
     public CloverInventoryController(
-            CloverInventorySyncService syncService) {
+            CloverSyncJobs syncService) {
 
         this.syncService = syncService;
     }
@@ -30,6 +30,6 @@ public class CloverInventoryController {
     public CloverSyncResponse synchronize(
             @PathVariable Long storeId) {
 
-        return syncService.synchronize(storeId);
+        return syncService.run(storeId);
     }
 }

@@ -42,7 +42,7 @@ public class CloverInventorySyncService {
 
     @Transactional
     public CloverSyncResponse synchronize(Long storeId) {
-        Store store = storeRepository.findById(storeId)
+        Store store = storeRepository.findLockedById(storeId)
                 .filter(Store::isActive)
                 .orElseThrow(() -> new StoreNotFoundException(
                         "Active store with ID "
@@ -50,8 +50,8 @@ public class CloverInventorySyncService {
                                 + " was not found"
                 ));
 
-        JsonNode itemsResponse = cloverClient.getItems();
-        JsonNode stocksResponse = cloverClient.getItemStocks();
+        JsonNode itemsResponse = cloverClient.getItems(storeId);
+        JsonNode stocksResponse = cloverClient.getItemStocks(storeId);
 
         Map<String, Integer> quantities =
                 extractStockQuantities(stocksResponse);
@@ -151,7 +151,7 @@ public class CloverInventorySyncService {
         }
 
         return new CloverSyncResponse(
-                cloverClient.getMerchantId(),
+                cloverClient.getMerchantId(storeId),
                 received,
                 created,
                 updated,

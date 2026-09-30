@@ -61,9 +61,20 @@ export function Dashboard({
         [account]
     );
 
+    const [connectionResult, setConnectionResult] = useState(() =>
+        new URLSearchParams(window.location.search).get("clover"));
     const rememberedStoreId = Number(
-        sessionStorage.getItem("splynt.storeId")
+        new URLSearchParams(window.location.search).get("store")
+            ?? sessionStorage.getItem("splynt.storeId")
     );
+    useEffect(() => {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("clover")) {
+            url.searchParams.delete("clover");
+            url.searchParams.delete("store");
+            window.history.replaceState(null, "", url);
+        }
+    }, []);
 
     const initialStore =
         storeAccesses.find(
@@ -370,6 +381,8 @@ export function Dashboard({
                     </div>
 
                     <CloverAutoSync
+                        key={selectedStoreId}
+                        canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"}
                         storeId={selectedStoreId}
                         onSynchronized={loadInventory}
                     />
@@ -404,6 +417,14 @@ export function Dashboard({
                     </div>
                 </header>
 
+                {connectionResult && (
+                    <div className={connectionResult === "connected" ? "message" : "message error-message"} role="status">
+                        {connectionResult === "connected"
+                            ? "Clover is connected. Your inventory will appear after the first sync; you can also choose Sync now."
+                            : "Clover wasn't connected. Try again from this browser and approve store access. If it keeps failing, contact support."}
+                        <button type="button" className="button secondary compact" onClick={() => setConnectionResult(null)}>Dismiss</button>
+                    </div>
+                )}
                 {error && (
                     <div className="message error-message">
                         {error}

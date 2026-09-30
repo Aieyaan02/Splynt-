@@ -19,6 +19,23 @@ public class CloverOAuthCredential {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "store_id", unique = true)
+    private Long storeId;
+
+    @Column(name = "last_synced_at")
+    private OffsetDateTime lastSyncedAt;
+
+    @Column(name = "last_sync_error", length = 255)
+    private String lastSyncError;
+
+    public Long getStoreId() { return storeId; }
+    public void assignStore(Long storeId) { this.storeId = java.util.Objects.requireNonNull(storeId); }
+    public OffsetDateTime getLastSyncedAt() { return lastSyncedAt; }
+    public String getLastSyncError() { return lastSyncError; }
+    public void markSynchronized() { lastSyncedAt = OffsetDateTime.now(); lastSyncError = null; }
+    public void markSyncFailed(String error) { lastSyncError = error; }
+
+
     @Column(
             name = "merchant_id",
             nullable = false,

@@ -24,13 +24,13 @@ class CloverInventorySyncServiceTest {
 
     @BeforeEach void setup() {
         product = new Product(store, "ABC", "Water", null, null, 10, 5, 20, null, ProductSource.CLOVER);
-        when(stores.findById(1L)).thenReturn(Optional.of(store));
-        when(client.getItems()).thenReturn(json.readTree("{\"elements\":[{\"id\":\"item1\",\"name\":\"Water\",\"code\":\"ABC\"}]}"));
+        when(stores.findLockedById(1L)).thenReturn(Optional.of(store));
+        when(client.getItems(1L)).thenReturn(json.readTree("{\"elements\":[{\"id\":\"item1\",\"name\":\"Water\",\"code\":\"ABC\"}]}"));
         when(products.findByStoreIdAndCloverItemId(1L, "item1")).thenReturn(Optional.of(product));
     }
 
     void stock(String value) {
-        when(client.getItemStocks()).thenReturn(json.readTree("{\"elements\":[{\"item\":{\"id\":\"item1\"},\"quantity\":" + value + "}]}"));
+        when(client.getItemStocks(1L)).thenReturn(json.readTree("{\"elements\":[{\"item\":{\"id\":\"item1\"},\"quantity\":" + value + "}]}"));
     }
 
     @Test void reconcilesWithoutInventingSales() {
@@ -46,7 +46,7 @@ class CloverInventorySyncServiceTest {
     }
 
     @Test void missingStockDoesNotEraseKnownQuantity() {
-        when(client.getItemStocks()).thenReturn(json.readTree("{\"elements\":[]}"));
+        when(client.getItemStocks(1L)).thenReturn(json.readTree("{\"elements\":[]}"));
         assertEquals(1, service.synchronize(1L).skipped());
         assertEquals(10, product.getQuantity());
         verifyNoInteractions(movements);
@@ -54,7 +54,7 @@ class CloverInventorySyncServiceTest {
     }
 
     @Test void malformedStockFailsInsteadOfZeroingCatalog() {
-        when(client.getItemStocks()).thenReturn(json.readTree("{}"));
+        when(client.getItemStocks(1L)).thenReturn(json.readTree("{}"));
         assertThrows(IllegalStateException.class, () -> service.synchronize(1L));
         verifyNoInteractions(movements);
     }

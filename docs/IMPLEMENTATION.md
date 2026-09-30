@@ -24,7 +24,7 @@ Build a usable retail inventory SaaS: signup, connect a merchant's own Clover st
 - Existing backend tests present; Java 26, Node and Docker CLI available locally.
 - Added optimistic versioning with a database migration and a database-backed stale-write regression test.
 - Sync records stock deltas as Clover adjustments (not sales), preserves archives, and skips unknown/unsupported quantities without erasing stock.
-- Baseline tests and targeted concurrency/sync regression tests passed. Full post-change suite pending below.
+- First checkpoint: 68 backend tests passed after concurrency/reconciliation changes.
 
 ## Next implementation steps
 1. Replace global Clover token/merchant configuration with per-store connections. Implement OAuth initiation, hashed one-time state, code exchange and merchant verification; restrict setup to owner/admin.
@@ -33,3 +33,15 @@ Build a usable retail inventory SaaS: signup, connect a merchant's own Clover st
 4. Implement sales event ingestion/insight foundation, docs, CI, end-to-end browser tests and staging instructions.
 
 Development checkout: work/splynt under this chat. Logs are in its parent work directory. No Render settings or production resources have been modified.
+
+## Store connection checkpoint
+- Replaced the placeholder OAuth callback and global merchant tokens with per-store OAuth initiation, code exchange, merchant verification, encrypted credentials, and owner/admin checks.
+- Authorization state is hashed, expires after 10 minutes, is browser-bound and consumed under a database lock before exchange. Concurrent replay and concurrent refresh tests added.
+- Added paginated inventory fetching and failure-on-partial-import behavior. Sync is serialized per store and runs server-side on a schedule.
+- Existing dashboard now supports connect/reconnect, manual sync, polling connection health, and recoverable callback messages. Full visual redesign remains outstanding.
+- Verification: full backend suite 82 tests passing; frontend build and lint passing; PostgreSQL 17 migration/schema validation and 11 OAuth integration tests pass, including concurrent single-use state/refresh. Earlier PostgreSQL stale-write regression also passed.
+- Added docs/CLOVER_SETUP.md with staging credentials, key handling, callback registration, upgrade behavior and limitations. Real merchant authorization remains unverified without configured credentials.
+- Contact email requested asynchronously; no response yet. Public website/contact workflow remains to build.
+- Temporary PostgreSQL container splynt-platform-test-db is for this task only; stopped after tests.
+
+Next: polish public site/auth/dashboard, product editing/search/reorder settings, real browser tests with a local provider simulator, then actual sales-history ingestion and explainable insights. Expand security and sync acceptance coverage before release. No production deployment or main-branch writes.
