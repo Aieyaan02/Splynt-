@@ -54,6 +54,7 @@ public class SecurityConfig {
                          */
                         .requestMatchers(
                                 HttpMethod.POST,
+                                "/api/public/inquiries",
                                 "/api/auth/register",
                                 "/api/auth/login"
                         )

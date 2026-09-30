@@ -1,9 +1,11 @@
+import { Brand } from "./Brand";
 import { CloverAutoSync } from "./CloverAutoSync";
 import {
     useCallback,
     useEffect,
     useMemo,
-    useState
+    useState,
+    useRef
 } from "react";
 
 import {
@@ -84,6 +86,8 @@ export function Dashboard({
     const [selectedStoreId, setSelectedStoreId] =
         useState<number | null>(initialStore?.id ?? null);
 
+    const activeStoreId = useRef(selectedStoreId);
+
     const [products, setProducts] =
         useState<Product[]>([]);
 
@@ -92,6 +96,19 @@ export function Dashboard({
 
     const [archivedProducts, setArchivedProducts] =
         useState<Product[]>([]);
+
+    const [search, setSearch] = useState("");
+    const [stockFilter, setStockFilter] = useState("all");
+    const [categoryFilter, setCategoryFilter] = useState("");
+    const requestGeneration = useRef(0);
+    const visibleProducts = products.filter(product => {
+        const term = search.toLowerCase().trim();
+        return (!term || [product.name, product.barcode, product.brand, product.category]
+            .some(value => value?.toLowerCase().includes(term)))
+            && (stockFilter === "all" || (stockFilter === "low" ? product.lowStock : product.quantity === 0))
+            && (!categoryFilter || product.category === categoryFilter);
+    });
+    const categories = [...new Set(products.map(product => product.category).filter(Boolean))] as string[];
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -114,10 +131,11 @@ export function Dashboard({
         ) ?? null;
 
     const loadInventory = useCallback(async () => {
-        if (selectedStoreId === null) {
+        if (selectedStoreId === null || activeStoreId.current !== selectedStoreId) {
             return;
         }
 
+        const generation = ++requestGeneration.current;
         setLoading(true);
         setError("");
 
@@ -132,13 +150,14 @@ export function Dashboard({
                 productApi.getArchived(selectedStoreId)
             ]);
 
+            if (generation !== requestGeneration.current) return;
             setProducts(allProducts);
             setLowStockProducts(lowStock);
             setArchivedProducts(archived);
         } catch (requestError) {
-            setError(getErrorMessage(requestError));
+            if (generation === requestGeneration.current) setError(getErrorMessage(requestError));
         } finally {
-            setLoading(false);
+            if (generation === requestGeneration.current) setLoading(false);
         }
     }, [selectedStoreId]);
 
@@ -256,10 +275,7 @@ export function Dashboard({
         <div className="dashboard-layout">
             <aside className="sidebar">
                 <div>
-                    <div className="brand">
-                        <span className="brand-mark">S</span>
-                        <span>Splynt</span>
-                    </div>
+                    <Brand light />
 
                     <div className="workspace-label">
                         Workspace
@@ -271,11 +287,14 @@ export function Dashboard({
                         <select
                             value={selectedStoreId ?? ""}
                             disabled={storeAccesses.length === 0}
-                            onChange={event =>
-                                setSelectedStoreId(
-                                    Number(event.target.value)
-                                )
-                            }
+                            onChange={event => {
+                                requestGeneration.current++;
+                                setProducts([]); setLowStockProducts([]); setArchivedProducts([]);
+                                setInventorySelection(null); setProductDialogOpen(false);
+                                setSearch(""); setCategoryFilter(""); setStockFilter("all");
+                                activeStoreId.current = Number(event.target.value);
+                                setSelectedStoreId(Number(event.target.value));
+                            }}
                         >
                             {storeAccesses.map(store => (
                                 <option
@@ -380,13 +399,6 @@ export function Dashboard({
                         </p>
                     </div>
 
-                    <CloverAutoSync
-                        key={selectedStoreId}
-                        canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"}
-                        storeId={selectedStoreId}
-                        onSynchronized={loadInventory}
-                    />
-
                     <div className="header-actions">
                         <button
                             className="button secondary"
@@ -416,6 +428,16 @@ export function Dashboard({
                         </button>
                     </div>
                 </header>
+                <section className="connection-panel" aria-label="Store integration">
+                    <div className="connection-panel-label"><span className="connection-icon">⇄</span><div><strong>Your store, connected.</strong><p>Bring your Clover inventory into focus.</p></div></div>
+                    <CloverAutoSync
+                        key={selectedStoreId}
+                        canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"}
+                        storeId={selectedStoreId}
+                        onSynchronized={loadInventory}
+                    />
+
+                </section>
 
                 {connectionResult && (
                     <div className={connectionResult === "connected" ? "message" : "message error-message"} role="status">
@@ -459,7 +481,7 @@ export function Dashboard({
                             inventoryValue,
                             selectedStore?.currencyCode
                         )}
-                        description="Based on unit cost"
+                        description={products.some(product => product.unitCost === null) ? "Partial value · some costs are missing" : "Based on unit cost"}
                     />
                 </section>
 
@@ -566,6 +588,13 @@ export function Dashboard({
                         </span>
                     </div>
 
+                    <div className="catalog-toolbar">
+                        <label className="catalog-search"><span>Search products</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search name, barcode, or brand…" /></label>
+                        <label><span>Stock status</span><select value={stockFilter} onChange={event => setStockFilter(event.target.value)}><option value="all">All stock levels</option><option value="low">Low stock</option><option value="out">Out of stock</option></select></label>
+                        <label><span>Category</span><select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)}><option value="">All categories</option>{categories.sort().map(category => <option key={category}>{category}</option>)}</select></label>
+                    </div>
+                    {products.length > 0 && <p className="catalog-count" aria-live="polite">Showing {visibleProducts.length} of {products.length} products</p>}
+                    {!loading && products.length > 0 && visibleProducts.length === 0 && <div className="empty-state"><h3>No matching products</h3><p>Try another name, barcode, or stock filter.</p><button className="button secondary" onClick={() => { setSearch(""); setStockFilter("all"); setCategoryFilter(""); }}>Clear filters</button></div>}
                     {loading ? (
                         <div className="empty-state">
                             Loading products…
@@ -576,11 +605,11 @@ export function Dashboard({
                                 □
                             </div>
 
-                            <h3>No active products</h3>
+                            <h3>Your shelves start here.</h3>
 
                             <p>
-                                Add a product or restore one from
-                                the archived-products section.
+                                Connect your Clover store above to import inventory,
+                                or add your first product manually.
                             </p>
                         </div>
                     ) : (
@@ -599,7 +628,7 @@ export function Dashboard({
                                 </thead>
 
                                 <tbody>
-                                    {products.map(product => (
+                                    {visibleProducts.map(product => (
                                         <tr key={product.id}>
                                             <td>
                                                 <strong>

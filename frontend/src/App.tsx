@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { ContactInbox } from "./components/ContactInbox";
+import { LandingPage } from "./components/LandingPage";
 import { AuthPage } from "./components/AuthPage";
 import { Dashboard } from "./components/Dashboard";
 
@@ -12,6 +14,12 @@ import {
 import type { Account } from "./types";
 
 export default function App() {
+    const [route, setRoute] = useState(() => window.location.hash.slice(1) || "/");
+    useEffect(() => {
+        const changed = () => { setRoute(window.location.hash.slice(1) || "/"); };
+        window.addEventListener("hashchange", changed);
+        return () => window.removeEventListener("hashchange", changed);
+    }, []);
     const [account, setAccount] =
         useState<Account | null>(null);
 
@@ -50,6 +58,10 @@ export default function App() {
         };
     }, []);
 
+    if (route === "/" || route === "/product" || route === "/contact") {
+        return <LandingPage signedIn={!!account} route={route} />;
+    }
+
     if (checkingSession) {
         return (
             <main className="loading-screen">
@@ -65,15 +77,19 @@ export default function App() {
     if (!account) {
         return (
             <AuthPage
-                onAuthenticated={setAccount}
+                key={route}
+                initialMode={route === "/signup" ? "register" : "login"}
+                onAuthenticated={account => { setAccount(account); window.location.hash = "/app"; }}
             />
         );
     }
 
+    if (route === "/inquiries") return <ContactInbox />;
+
     return (
         <Dashboard
             account={account}
-            onLogout={() => setAccount(null)}
+            onLogout={() => { setAccount(null); window.location.hash = "/login"; }}
         />
     );
 }

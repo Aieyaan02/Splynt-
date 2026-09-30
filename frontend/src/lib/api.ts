@@ -253,3 +253,10 @@ export const cloverApi = {
         return request(`/api/stores/${storeId}/integrations/clover/sync`, { method: "POST" });
     }
 };
+
+export interface ContactInquiry { id: number; name: string; email: string; business: string | null; message: string; createdAt: string; }
+export const operationsApi = {
+    inquiries(page: number): Promise<{ content: ContactInquiry[]; totalPages: number; number: number }> {
+        return request(`/api/operations/inquiries?page=${page}`);
+    }
+};

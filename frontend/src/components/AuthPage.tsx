@@ -1,3 +1,4 @@
+import { Brand } from "./Brand";
 import { useState } from "react";
 import type { FormEvent } from "react";
 
@@ -14,6 +15,7 @@ import type {
 
 interface AuthPageProps {
     onAuthenticated: (account: Account) => void;
+    initialMode?: "login" | "register";
 }
 
 const initialRegistration: RegisterRequest = {
@@ -28,10 +30,10 @@ const initialRegistration: RegisterRequest = {
 };
 
 export function AuthPage({
-    onAuthenticated
+    onAuthenticated, initialMode = "login"
 }: AuthPageProps) {
     const [mode, setMode] =
-        useState<"login" | "register">("login");
+        useState<"login" | "register">(initialMode);
 
     const [loginEmail, setLoginEmail] = useState("");
     const [loginPassword, setLoginPassword] = useState("");
@@ -109,14 +111,17 @@ export function AuthPage({
         try {
             await authApi.register(registrationRequest);
 
-            setLoginEmail(registration.email.trim());
-            setLoginPassword("");
+            try {
+                const session = await authApi.login({ email: registration.email.trim(), password: registration.password });
+                setAccessToken(session.accessToken);
+                onAuthenticated(await accountApi.getCurrent());
+            } catch {
+                setLoginEmail(registration.email.trim());
+                setLoginPassword("");
+                setMode("login");
+                setSuccess("Your account is ready. Sign in to continue.");
+            }
             setRegistration(initialRegistration);
-            setMode("login");
-
-            setSuccess(
-                "Account created successfully. Sign in to continue."
-            );
         } catch (requestError) {
             setError(getErrorMessage(requestError));
         } finally {
@@ -137,10 +142,7 @@ export function AuthPage({
     return (
         <main className="auth-layout">
             <section className="auth-visual">
-                <div className="brand brand-light">
-                    <span className="brand-mark">S</span>
-                    <span>Splynt</span>
-                </div>
+                <Brand light />
 
                 <div className="hero-content">
                     <span className="eyebrow">
@@ -159,23 +161,23 @@ export function AuthPage({
 
                     <div className="hero-features">
                         <article>
-                            <strong>Multi-tenant</strong>
+                            <strong>Your own workspace</strong>
 
                             <span>
-                                Secure organization and store isolation
+                                Keep every store’s inventory organized
                             </span>
                         </article>
 
                         <article>
-                            <strong>Real-time ready</strong>
+                            <strong>Stay connected</strong>
 
                             <span>
-                                Designed for Clover synchronization
+                                Bring your Clover inventory into view
                             </span>
                         </article>
 
                         <article>
-                            <strong>Actionable</strong>
+                            <strong>Know your next move</strong>
 
                             <span>
                                 Stock alerts with suggested reorder amounts
@@ -191,6 +193,7 @@ export function AuthPage({
 
             <section className="auth-form-side">
                 <div className="auth-card">
+                    <a href="#/" className="auth-back">← Back to Splynt</a>
                     <div className="mobile-brand brand">
                         <span className="brand-mark">S</span>
                         <span>Splynt</span>
