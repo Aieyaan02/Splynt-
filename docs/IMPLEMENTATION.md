@@ -114,3 +114,9 @@ Next work: editable product settings/stock targets, visible inventory history, a
 - Absence detection runs only after both paginated collections finish successfully and remains scoped to the current store and Clover source. Manual inventory and local archives are preserved.
 - Verification: clean backend suite passed (162 tests, zero failures/errors), frontend build/lint passed, whitespace check passed. Tests cover disappearance/reappearance, explicit deletion, fetch failure and manual inventory isolation. No schema change. Browser/live Clover verification remains outstanding.
 - Goal remains active. Currency/monetary fields, full category associations, remaining acceptance/concurrency checks, live integrations, visual QA and deployment/CI/PR handoff are still incomplete. No production/main changes.
+
+## CI and staging handoff checkpoint — 2026-10-07
+- Added a root README with local startup, verification commands and explicit current integration/release limits. Added a Render staging guide with branch separation, independent database/credentials, environment mapping, acceptance checks and migration-aware recovery.
+- Added a read-only GitHub Actions workflow for development pushes, pull requests and manual runs. Jobs verify Java/frontend, run 34 database-backed HTTP tests with PostgreSQL 17 and Flyway/schema validation, then build the Render Dockerfile. No deployment/publishing credentials or actions. Action references are pinned to SHAs verified from upstream major-version refs.
+- Local verification: workflow YAML parses; the exact selected PostgreSQL test group passed all 34 tests against PostgreSQL 17.11 and validated 15 migrations. Isolated DB stopped afterward. Hosted workflow and container build results must be checked separately; adding the workflow is not proof of a green hosted run.
+- No Render resources/settings changed. Remaining implementation/live acceptance and visual QA requirements are unchanged; goal remains active.
