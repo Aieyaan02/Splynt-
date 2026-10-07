@@ -15,14 +15,16 @@ import com.aieyaan.splynt.tenant.StoreRepository;
 public class StoreAuthorizationService {
 
     private final StoreRepository storeRepository;
+    private final com.aieyaan.splynt.tenant.AppUserRepository users;
     private final OrganizationMembershipRepository
             membershipRepository;
 
     public StoreAuthorizationService(
             StoreRepository storeRepository,
-            OrganizationMembershipRepository membershipRepository) {
+            OrganizationMembershipRepository membershipRepository, com.aieyaan.splynt.tenant.AppUserRepository users) {
 
         this.storeRepository = storeRepository;
+        this.users = users;
         this.membershipRepository = membershipRepository;
     }
 
@@ -39,7 +41,7 @@ public class StoreAuthorizationService {
 
         Long userId = extractUserId(authentication);
 
-        if (userId == null) {
+        if (userId == null || users.findById(userId).filter(com.aieyaan.splynt.tenant.AppUser::isEnabled).isEmpty()) {
             return false;
         }
 
@@ -52,7 +54,7 @@ public class StoreAuthorizationService {
 
         Store store = storeResult.get();
 
-        if (!store.isActive()) {
+        if (!store.isActive() || !store.getOrganization().isActive()) {
             return false;
         }
 
@@ -73,8 +75,8 @@ public class StoreAuthorizationService {
     }
 
     public boolean canManageUser(Long userId, Long storeId) {
-        if (userId == null || storeId == null) return false;
-        return storeRepository.findById(storeId).filter(Store::isActive)
+        if (userId == null || storeId == null || users.findById(userId).filter(com.aieyaan.splynt.tenant.AppUser::isEnabled).isEmpty()) return false;
+        return storeRepository.findById(storeId).filter(Store::isActive).filter(s -> s.getOrganization().isActive())
                 .flatMap(store -> membershipRepository.findByOrganizationIdAndUserIdAndActiveTrue(
                         store.getOrganization().getId(), userId))
                 .map(membership -> membership.getRole() == com.aieyaan.splynt.tenant.MembershipRole.OWNER

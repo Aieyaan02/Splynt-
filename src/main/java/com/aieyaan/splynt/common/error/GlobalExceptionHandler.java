@@ -154,7 +154,7 @@ public class GlobalExceptionHandler {
             OptimisticLockingFailureException exception,
             HttpServletRequest request) {
         return buildResponse(HttpStatus.CONFLICT,
-                "Inventory changed while you were working. Refresh and try again.",
+                "This record changed while you were working. Refresh and try again.",
                 request.getRequestURI(), Map.of());
     }
 

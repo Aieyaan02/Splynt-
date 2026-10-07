@@ -279,3 +279,13 @@ export interface SalesInsights {
 export const insightsApi = {
     read(storeId: number): Promise<SalesInsights> { return request(`/api/stores/${storeId}/insights`); }
 };
+
+export interface StoreSettings {
+    id?: number; version?: number; name: string; city: string | null; state: string | null;
+    countryCode: string; timezone: string; currencyCode: string;
+}
+export const storeApi = {
+    read(id: number): Promise<StoreSettings> { return request(`/api/stores/${id}/settings`); },
+    update(id: number, data: StoreSettings): Promise<StoreSettings> { return request(`/api/stores/${id}/settings`, { method: "PATCH", body: JSON.stringify(data) }); },
+    create(organizationId: number, data: StoreSettings): Promise<StoreSettings> { return request(`/api/organizations/${organizationId}/stores`, { method: "POST", body: JSON.stringify(data) }); }
+};

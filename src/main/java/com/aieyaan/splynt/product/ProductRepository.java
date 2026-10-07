@@ -43,6 +43,9 @@ public interface ProductRepository
             @Param("cloverItemId") String cloverItemId
     );
 
+    @Query("select case when count(p) > 0 then true else false end from Product p where p.store.id = :storeId")
+    boolean existsByStoreId(@Param("storeId") Long storeId);
+
     @Query("""
             SELECT CASE
                 WHEN COUNT(p) > 0 THEN true

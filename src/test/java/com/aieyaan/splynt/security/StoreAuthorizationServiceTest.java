@@ -24,6 +24,14 @@ import com.aieyaan.splynt.tenant.StoreRepository;
 class StoreAuthorizationServiceTest {
 
     @Mock
+    private com.aieyaan.splynt.tenant.AppUserRepository users;
+
+    private void enabledUser() {
+        var user = new com.aieyaan.splynt.tenant.AppUser("owner@example.com", "hash", "Owner", "One");
+        when(users.findById(7L)).thenReturn(Optional.of(user));
+    }
+
+    @Mock
     private StoreRepository storeRepository;
 
     @Mock
@@ -38,6 +46,7 @@ class StoreAuthorizationServiceTest {
 
     @Test
     void allowsActiveMemberToAccessActiveStore() {
+        enabledUser();
         Store store = mock(Store.class);
         Organization organization =
                 mock(Organization.class);
@@ -60,6 +69,8 @@ class StoreAuthorizationServiceTest {
         when(store.getOrganization())
                 .thenReturn(organization);
 
+        when(organization.isActive()).thenReturn(true);
+
         when(organization.getId())
                 .thenReturn(3L);
 
@@ -80,6 +91,7 @@ class StoreAuthorizationServiceTest {
 
     @Test
     void deniesUserWithoutActiveMembership() {
+        enabledUser();
         Store store = mock(Store.class);
         Organization organization =
                 mock(Organization.class);
@@ -98,6 +110,8 @@ class StoreAuthorizationServiceTest {
 
         when(store.getOrganization())
                 .thenReturn(organization);
+
+        when(organization.isActive()).thenReturn(true);
 
         when(organization.getId())
                 .thenReturn(3L);
@@ -119,6 +133,7 @@ class StoreAuthorizationServiceTest {
 
     @Test
     void deniesAccessToInactiveStore() {
+        enabledUser();
         Store store = mock(Store.class);
 
         when(authentication.isAuthenticated())

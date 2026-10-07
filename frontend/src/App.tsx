@@ -89,6 +89,7 @@ export default function App() {
     return (
         <Dashboard
             account={account}
+            onAccountChanged={setAccount}
             onLogout={() => { setAccount(null); window.location.hash = "/login"; }}
         />
     );

@@ -46,3 +46,9 @@ Enable Clover order-read permission before connecting a staging store to import 
 Only paid, non-refunded supported product lines are counted. Partially refunded orders are currently excluded rather than estimated. Ordinary line items count as one unit; per-unit quantities use Clover's thousandths representation. Unknown catalog items and unsupported quantities are skipped. No customer/payment details are persisted. Timing reflects order creation, not payment time.
 
 Dashboard calculations use up to 30 full local calendar days covered by the last successful import. Failed or stopped imports do not add zero-sale days. The dashboard shows the last import and date window; stock-cover estimates assume the observed average continues and are not demand forecasts. Seasonal and AI product recommendations remain future implementation work.
+
+### Store location and local reporting
+
+Owners and admins can open **Store settings** beside the store picker to set the store name, city, region, country and IANA timezone. This changes how existing sales timestamps are grouped; it does not alter original order times. Set the store currency before adding products or connecting Clover. Splynt does not convert existing inventory costs between currencies.
+
+Use **Add store** to create another store inside an organization you own or administer. Each store has its own Clover connection, stock and reporting context. Choose the new store in the picker, then connect the matching Clover merchant. Settings edits use version checks to reject stale forms. Disabled accounts and inactive organizations cannot access stores with previously issued tokens.

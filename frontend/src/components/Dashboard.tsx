@@ -1,3 +1,4 @@
+import { StoreSettingsDialog } from "./StoreSettingsDialog";
 import { InsightsPanel } from "./InsightsPanel";
 import { ProductDetailsDialog } from "./ProductDetailsDialog";
 import { Brand } from "./Brand";
@@ -23,6 +24,7 @@ import {
 } from "./ProductDialog";
 
 import {
+    accountApi,
     clearAccessToken,
     productApi
 } from "../lib/api";
@@ -36,6 +38,7 @@ import type {
 
 interface DashboardProps {
     account: Account;
+    onAccountChanged: (account: Account) => void;
     onLogout: () => void;
 }
 
@@ -51,6 +54,7 @@ interface InventorySelection {
 
 export function Dashboard({
     account,
+    onAccountChanged,
     onLogout
 }: DashboardProps) {
     const storeAccesses = useMemo<StoreAccess[]>(
@@ -64,6 +68,9 @@ export function Dashboard({
             ),
         [account]
     );
+
+    const [storeDialog, setStoreDialog] = useState<{ id: number | null } | null>(null);
+    const [storeRevision, setStoreRevision] = useState(0);
 
     const [connectionResult, setConnectionResult] = useState(() =>
         new URLSearchParams(window.location.search).get("clover"));
@@ -310,6 +317,10 @@ export function Dashboard({
                         </select>
                     </label>
 
+                    <div className="store-management">
+                        {(selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN") && <button className="navigation-item" onClick={() => setStoreDialog({ id: selectedStoreId })}>Store settings</button>}
+                        {account.organizations.some(org => org.role === "OWNER" || org.role === "ADMIN") && <button className="navigation-item" onClick={() => setStoreDialog({ id: null })}>+ Add store</button>}
+                    </div>
                     <nav className="sidebar-navigation">
                         <button
                             className="navigation-item active"
@@ -749,7 +760,7 @@ export function Dashboard({
                     )}
                 </section>
 
-                {selectedStoreId !== null && <InsightsPanel key={selectedStoreId} storeId={selectedStoreId} />}
+                {selectedStoreId !== null && <InsightsPanel key={`${selectedStoreId}-${storeRevision}`} storeId={selectedStoreId} />}
                 <section
                     id="archived-products-section"
                     className="content-card"
@@ -866,6 +877,15 @@ export function Dashboard({
                 </section>
             </main>
 
+            {storeDialog && <StoreSettingsDialog storeId={storeDialog.id} organizations={account.organizations}
+                onClose={() => setStoreDialog(null)} onSaved={async id => {
+                    const refreshed = await accountApi.getCurrent();
+                    onAccountChanged(refreshed);
+                    requestGeneration.current++;
+                    if (id !== selectedStoreId) { setProducts([]); setLowStockProducts([]); setArchivedProducts([]); }
+                    setInventorySelection(null); setProductDialogOpen(false); setDetailProduct(null);
+                    activeStoreId.current = id; setSelectedStoreId(id); setStoreRevision(current => current + 1);
+                }} />}
             {detailProduct && selectedStoreId !== null && <ProductDetailsDialog
                 key={`${selectedStoreId}-${detailProduct.id}`}
                 product={detailProduct} storeId={selectedStoreId}
