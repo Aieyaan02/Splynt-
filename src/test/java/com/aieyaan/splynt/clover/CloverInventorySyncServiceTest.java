@@ -41,6 +41,7 @@ class CloverInventorySyncServiceTest {
         verify(movements).save(captor.capture());
         assertEquals(InventoryMovementType.ADJUSTMENT, captor.getValue().getMovementType());
         assertEquals(InventoryMovementSource.CLOVER, captor.getValue().getSource());
+        assertNull(captor.getValue().getExternalReference());
         assertEquals(10, captor.getValue().getQuantityBefore().intValueExact());
         assertEquals(3, captor.getValue().getQuantityAfter().intValueExact());
     }

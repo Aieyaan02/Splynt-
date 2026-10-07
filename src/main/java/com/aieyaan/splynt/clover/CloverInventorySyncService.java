@@ -281,7 +281,9 @@ public class CloverInventorySyncService {
         movements.save(new InventoryMovement(product, InventoryMovementType.ADJUSTMENT,
                 after.subtract(before), before, after, InventoryMovementSource.CLOVER,
                 wasKnown ? "Stock reconciled from Clover" : "Stock restored from Clover; prior balance was last known, not current",
-                product.getCloverItemId()));
+                // A stock snapshot has no provider event ID. The product relation identifies
+                // the item; reusing its ID as a unique event reference rejects later adjustments.
+                null));
     }
 
     private void applyCatalogDetails(Product product, JsonNode item, String currency, String storeCurrency) {
