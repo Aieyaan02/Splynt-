@@ -31,6 +31,7 @@ export function InventoryDialog({
     const dialogReference =
         useRef<HTMLDialogElement>(null);
 
+    const requestId = useRef(crypto.randomUUID());
     const operationState = useRef(confirmedMutation());
     const [saved, setSaved] = useState(false);
     const [quantity, setQuantity] = useState(1);
@@ -71,6 +72,7 @@ export function InventoryDialog({
 
         try {
             const request = {
+                requestId: requestId.current,
                 quantity,
                 note: note.trim() || null
             };

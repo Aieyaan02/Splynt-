@@ -10,6 +10,10 @@ import org.springframework.data.repository.query.Param;
 public interface ProductRepository
         extends JpaRepository<Product, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Product p where p.store.id = :storeId and p.id = :productId")
+    Optional<Product> findLockedByStoreIdAndId(@Param("storeId") Long storeId, @Param("productId") Long productId);
+
     @Query("""
             SELECT p
             FROM Product p

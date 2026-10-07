@@ -35,11 +35,13 @@ public class InventoryService {
 
         Product product = findActiveProduct(
                 storeId,
-                productId
+                productId, request.requestId() != null
         );
 
         if (product.getSource() == com.aieyaan.splynt.product.ProductSource.CLOVER)
             throw new IllegalArgumentException("Manage Clover stock in Clover, then sync Splynt. This prevents changes being overwritten.");
+        InventoryTransactionResponse replay = replay(product, storeId, productId, request, InventoryMovementType.SALE);
+        if (replay != null) return replay;
         java.math.BigDecimal quantityBefore = product.getQuantity();
 
         product.recordSale(request.quantity());
@@ -52,7 +54,7 @@ public class InventoryService {
                 product.getQuantity(),
                 InventoryMovementSource.MANUAL,
                 request.note(),
-                null
+                requestReference(storeId, productId, request.requestId())
         );
 
         productRepository.save(product);
@@ -74,11 +76,13 @@ public class InventoryService {
 
         Product product = findActiveProduct(
                 storeId,
-                productId
+                productId, request.requestId() != null
         );
 
         if (product.getSource() == com.aieyaan.splynt.product.ProductSource.CLOVER)
             throw new IllegalArgumentException("Manage Clover stock in Clover, then sync Splynt. This prevents changes being overwritten.");
+        InventoryTransactionResponse replay = replay(product, storeId, productId, request, InventoryMovementType.RESTOCK);
+        if (replay != null) return replay;
         java.math.BigDecimal quantityBefore = product.getQuantity();
 
         product.restock(request.quantity());
@@ -91,7 +95,7 @@ public class InventoryService {
                 product.getQuantity(),
                 InventoryMovementSource.MANUAL,
                 request.note(),
-                null
+                requestReference(storeId, productId, request.requestId())
         );
 
         productRepository.save(product);
@@ -124,12 +128,28 @@ public class InventoryService {
                 .toList();
     }
 
+    private String requestReference(Long storeId, Long productId, String id) {
+        return id == null ? null : "request:" + storeId + ":" + productId + ":" + java.util.UUID.fromString(id);
+    }
+    private InventoryTransactionResponse replay(Product product, Long storeId, Long productId,
+            InventoryChangeRequest request, InventoryMovementType type) {
+        String reference = requestReference(storeId, productId, request.requestId());
+        if (reference == null) return null;
+        var prior = movementRepository.findBySourceAndExternalReference(InventoryMovementSource.MANUAL, reference);
+        if (prior.isEmpty()) return null;
+        var movement = prior.get();
+        String note = request.note() == null || request.note().trim().isEmpty() ? null : request.note().trim();
+        if (movement.getMovementType() != type || movement.getQuantityChange().abs().compareTo(request.quantity()) != 0
+                || !java.util.Objects.equals(movement.getNote(), note))
+            throw new IllegalArgumentException("This request ID was already used for a different inventory change. Refresh inventory before starting a new change.");
+        return new InventoryTransactionResponse(ProductResponse.from(product), InventoryMovementResponse.from(movement));
+    }
+
     private Product findActiveProduct(
             Long storeId,
-            Long productId) {
+            Long productId, boolean lock) {
 
-        return productRepository
-                .findByStoreIdAndId(storeId, productId)
+        return (lock ? productRepository.findLockedByStoreIdAndId(storeId, productId) : productRepository.findByStoreIdAndId(storeId, productId))
                 .filter(Product::isActive)
                 .orElseThrow(() -> new ProductNotFoundException(
                         "Product with ID "

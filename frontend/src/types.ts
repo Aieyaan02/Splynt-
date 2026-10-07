@@ -129,6 +129,7 @@ export interface CreateProductRequest {
 }
 
 export interface InventoryChangeRequest {
+    requestId?: string;
     quantity: number;
     note: string | null;
 }

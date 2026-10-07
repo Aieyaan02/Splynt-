@@ -191,3 +191,9 @@ Next work: editable product settings/stock targets, visible inventory history, a
 - Added a labelled inventory dialog and alert semantics. Product-detail view selectors now use standard pressed buttons instead of incomplete tab roles lacking tab-panel/arrow-key behavior.
 - Verification: three browser-independent Node regression tests cover failed refresh, rejected write and concurrent calls; frontend build/lint and whitespace checks passed. Added frontend tests to CI and README. No browser rendering or keyboard acceptance was performed under the pending permission restriction. Hosted CI for 30b8680 passed.
 - Goal active; live integrations/model quality, visual/accessibility acceptance, account workflows and final review remain incomplete. Production/main unchanged.
+
+### Inventory request replay protection
+
+Manual sale/restock requests accept an optional UUID requestId, scoped to store and product. The inventory dialog retains that ID across retries while open. The server locks the product, records the ID with the movement, and returns the original movement on replay without changing stock again. Reusing the ID with a different quantity, note, or operation is rejected. Responses contain the current product balance and original movement. Legacy requests without an ID retain their previous behavior; reopening the dialog creates a new ID, so this is not a guarantee across reloads. Clover-owned stock remains read-only.
+
+Validation: existing backend suite, three new database replay/concurrency tests, frontend retry tests, lint and production build. PostgreSQL replay tests are included in hosted CI. Live browser and provider acceptance remain outstanding.
