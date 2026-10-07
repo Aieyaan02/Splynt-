@@ -278,10 +278,10 @@ export interface SalesInsights {
         months: { month: string; complete: boolean; days: number; orders: number | null; ordersPerDay?: number | null; units?: number | null; unitsPerDay?: number | null }[];
         comparisons: { month: string; previousMonth: string; sufficient: boolean; dailyOrdersChangePercent?: number | null; dailyUnitsChangePercent?: number | null }[];
         recurringPatterns: { calendarMonth: number; direction: string; earlierIndex: number; latestIndex: number }[];
-        productComparisons: { unit?: string; productId: number; name: string; month: string; previousMonth: string; units: number; previousUnits: number; orders: number; previousOrders: number; sufficient: boolean; dailyUnitsChangePercent: number | null }[];
+        productComparisons: { unit?: string; productId: number; name: string; month: string; previousMonth: string; units: number | null; previousUnits: number | null; orders: number; previousOrders: number; sufficient: boolean; dailyUnitsChangePercent: number | null }[];
     };
     summary: { completeDays: number; orders: number; units: number; sufficientForVelocity: boolean;
-        topProducts: { productId: number; name: string; units: number; unitsPerDay: number | null; estimatedDaysRemaining: number | null; currentStock: number | null; orders: number; unit: string }[];
+        topProducts: { productId: number; name: string; units: number | null; unitsPerDay: number | null; estimatedDaysRemaining: number | null; currentStock: number | null; orders: number; unit: string }[];
         hourlyUnits: number[]; weekdayUnits: number[]; hourlyOrders: number[]; weekdayOrders: number[]; };
 }
 export const insightsApi = {

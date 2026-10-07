@@ -63,6 +63,7 @@ public class InsightsService {
     static Summary calculate(List<SalesEvent> events, Map<Long, Product> catalog, ZoneId zone, LocalDate start, LocalDate end) {
         int days = (int) ChronoUnit.DAYS.between(start, end);
         Map<Long, BigDecimal> totals = new HashMap<>();
+        Map<Long, Set<String>> quantityUnits = new HashMap<>();
         Map<Long, Set<String>> productOrders = new HashMap<>();
         BigDecimal[] hourlyOrders = new BigDecimal[24]; Arrays.fill(hourlyOrders, BigDecimal.ZERO);
         BigDecimal[] weekdayOrders = new BigDecimal[7]; Arrays.fill(weekdayOrders, BigDecimal.ZERO);
@@ -73,6 +74,7 @@ public class InsightsService {
             var local = event.getOccurredAt().atZoneSameInstant(zone);
             if (local.toLocalDate().isBefore(start) || !local.toLocalDate().isBefore(end)) continue;
             totals.merge(event.getProductId(), event.getUnits(), BigDecimal::add);
+            quantityUnits.computeIfAbsent(event.getProductId(), ignored -> new HashSet<>()).add(Objects.toString(event.getQuantityUnit(), "unknown"));
             hourly[local.getHour()] = hourly[local.getHour()].add(event.getUnits());
             int day = local.getDayOfWeek().getValue() - 1;
             weekdays[day] = weekdays[day].add(event.getUnits());
@@ -87,10 +89,15 @@ public class InsightsService {
                 .sorted(Comparator.<Map.Entry<Long, BigDecimal>>comparingInt(e -> productOrders.get(e.getKey()).size()).reversed().thenComparing(Map.Entry::getKey)).limit(10)
                 .map(e -> {
                     Product p = catalog.get(e.getKey());
-                    BigDecimal velocity = sufficient ? e.getValue().divide(BigDecimal.valueOf(days), 3, RoundingMode.HALF_UP) : null;
-                    BigDecimal cover = !p.isStockKnown() || velocity == null || velocity.signum() == 0 ? null
+                    Set<String> observedUnits = quantityUnits.get(e.getKey());
+                    boolean comparable = observedUnits.size() == 1 && !observedUnits.contains("unknown");
+                    String unit = comparable ? observedUnits.iterator().next() : "Mixed or unknown units";
+                    String stockUnit = p.getCloverDetails() != null && "PER_UNIT".equals(p.getCloverDetails().priceType())
+                            ? Objects.toString(p.getCloverDetails().unitName(), "unknown").trim().toLowerCase(Locale.ROOT) : "items";
+                    BigDecimal velocity = sufficient && comparable ? e.getValue().divide(BigDecimal.valueOf(days), 3, RoundingMode.HALF_UP) : null;
+                    BigDecimal cover = !p.isStockKnown() || !unit.equals(stockUnit) || velocity == null || velocity.signum() == 0 ? null
                             : p.getQuantity().max(BigDecimal.ZERO).divide(velocity, 1, RoundingMode.HALF_UP);
-                    return new ProductInsight(p.getId(), p.getName(), e.getValue(), velocity, cover, p.isStockKnown() ? p.getQuantity() : null, productOrders.get(e.getKey()).size(), p.getCloverDetails() != null && "PER_UNIT".equals(p.getCloverDetails().priceType()) ? Objects.toString(p.getCloverDetails().unitName(), "provider units") : "items");
+                    return new ProductInsight(p.getId(), p.getName(), comparable ? e.getValue() : null, velocity, cover, p.isStockKnown() && unit.equals(stockUnit) ? p.getQuantity() : null, productOrders.get(e.getKey()).size(), unit);
                 }).toList();
         BigDecimal total = totals.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         return new Summary(days, orders.size(), total, sufficient, leaders, List.of(hourly), List.of(weekdays), List.of(hourlyOrders), List.of(weekdayOrders));

@@ -88,4 +88,19 @@ class CloverSalesSyncServiceTest {
         }
     }
 
+    @Test void saleRetainsItsHistoricalUnitInsteadOfCurrentCatalogUnit() {
+        product.setCloverDetails(new CloverCatalogDetails(null, null, "lb", "PER_UNIT", true, false, java.util.List.of()));
+        products.saveAndFlush(product);
+        when(client.getOrderLines(store.getId(), "order1")).thenReturn(json.readTree("{\"elements\":[{\"id\":\"line1\",\"item\":{\"id\":\"item1\"},\"unitName\":\"oz\",\"unitQty\":2500}]}"));
+        sync.synchronize(store.getId());
+        var event = sales.findAllByStoreIdAndOccurredAtGreaterThanEqualOrderByOccurredAtAsc(store.getId(), OffsetDateTime.now().minusDays(90)).getFirst();
+        assertEquals("oz", event.getQuantityUnit());
+        assertEquals(0, new BigDecimal("2.5").compareTo(event.getUnits()));
+    }
+    @Test void unknownWeightedUnitIsNotAssumedToBeAnItem() {
+        assertNull(CloverSalesSyncService.quantityUnit(json.readTree("{\"item\":{\"priceType\":\"PER_UNIT\"}}")));
+        assertEquals("items", CloverSalesSyncService.quantityUnit(json.readTree("{}")));
+        assertEquals("oz", CloverSalesSyncService.quantityUnit(json.readTree("{\"unitName\":\" OZ \"}")));
+    }
+
 }

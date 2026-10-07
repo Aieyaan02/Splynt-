@@ -72,8 +72,8 @@ class InsightsServiceTest {
         when(weighted.getCloverDetails()).thenReturn(new com.aieyaan.splynt.product.CloverCatalogDetails(null, null, "oz", "PER_UNIT", true, false, List.of()));
         when(counted.getId()).thenReturn(2L); when(counted.getName()).thenReturn("Bottles");
         var at = OffsetDateTime.parse("2026-09-02T14:00:00Z");
-        var events = List.of(new SalesEvent(1L, 1L, "one", "a", new BigDecimal("1000"), at),
-                new SalesEvent(1L, 1L, "one", "b", new BigDecimal("2000"), at),
+        var events = List.of(new SalesEvent(1L, 1L, "one", "a", new BigDecimal("1000"), at, "oz"),
+                new SalesEvent(1L, 1L, "one", "b", new BigDecimal("2000"), at, "oz"),
                 new SalesEvent(1L, 2L, "one", "c", BigDecimal.ONE, at),
                 new SalesEvent(1L, 2L, "two", "d", BigDecimal.ONE, at));
         var result = InsightsService.calculate(events, Map.of(1L, weighted, 2L, counted), zone,
@@ -84,6 +84,23 @@ class InsightsServiceTest {
         assertEquals(2, result.topProducts().getFirst().orders());
         assertEquals("oz", result.topProducts().get(1).unit());
         assertEquals(new BigDecimal("3000"), result.topProducts().get(1).units());
+    }
+    @Test void changedMeasurementSuppressesQuantityRatesButKeepsOrderCounts() {
+        Product product = mock(Product.class);
+        when(product.getId()).thenReturn(1L); when(product.getName()).thenReturn("Spice");
+        when(product.isStockKnown()).thenReturn(true); when(product.getQuantity()).thenReturn(BigDecimal.TEN);
+        when(product.getCloverDetails()).thenReturn(new com.aieyaan.splynt.product.CloverCatalogDetails(null, null, "lb", "PER_UNIT", true, false, List.of()));
+        List<SalesEvent> events = new ArrayList<>();
+        for (int i = 0; i < 30; i++) events.add(new SalesEvent(1L, 1L, "order-" + i, "line", BigDecimal.ONE,
+                OffsetDateTime.parse("2026-09-10T16:00:00Z"), "oz"));
+        var result = InsightsService.calculate(events, Map.of(1L, product), zone, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 1));
+        assertNotNull(result.topProducts().getFirst().unitsPerDay());
+        assertNull(result.topProducts().getFirst().estimatedDaysRemaining());
+        assertNull(result.topProducts().getFirst().currentStock());
+        events.add(new SalesEvent(1L, 1L, "new-unit", "line", BigDecimal.ONE, OffsetDateTime.parse("2026-09-11T16:00:00Z"), "lb"));
+        result = InsightsService.calculate(events, Map.of(1L, product), zone, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 1));
+        assertEquals(31, result.orders()); assertEquals(31, result.topProducts().getFirst().orders());
+        assertNull(result.topProducts().getFirst().units()); assertNull(result.topProducts().getFirst().unitsPerDay());
     }
     private SalesEvent event(String order, String at, String quantity) {
         return new SalesEvent(1L, 1L, order, UUID.randomUUID().toString(), new BigDecimal(quantity), OffsetDateTime.parse(at));

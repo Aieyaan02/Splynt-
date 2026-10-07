@@ -78,4 +78,15 @@ class HistoricalSalesAnalysisTest {
         assertTrue(result.productComparisons().getFirst().dailyUnitsChangePercent().signum() > 0);
     }
 
+    @Test void productYearComparisonRequiresConsistentHistoricalUnits() {
+        for (int year : new int[]{2025, 2026}) for (int i = 0; i < 30; i++)
+            events.add(new SalesEvent(1L, 1L, year + "-" + i, "line", BigDecimal.ONE,
+                    OffsetDateTime.parse(year + "-09-10T16:00:00Z"), year == 2025 ? "oz" : "lb"));
+        var result = analyze("2024-01-01T05:00:00Z", "2026-10-01");
+        assertTrue(result.comparisons().getLast().sufficient());
+        var product = result.productComparisons().getFirst();
+        assertEquals(30, product.orders()); assertFalse(product.sufficient());
+        assertNull(product.units()); assertNull(product.previousUnits()); assertNull(product.dailyUnitsChangePercent());
+    }
+
 }

@@ -21,6 +21,7 @@ public final class HistoricalSalesAnalysis {
             Bucket bucket = buckets.get(month);
             if (bucket == null) continue;
             bucket.orders.add(event.getOrderId());
+            bucket.quantityUnits.computeIfAbsent(event.getProductId(), ignored -> new HashSet<>()).add(Objects.toString(event.getQuantityUnit(), "unknown"));
             bucket.products.merge(event.getProductId(), event.getUnits(), BigDecimal::add);
             bucket.productOrders.computeIfAbsent(event.getProductId(), ignored -> new HashSet<>()).add(event.getOrderId());
         }
@@ -65,10 +66,14 @@ public final class HistoricalSalesAnalysis {
                     .sorted(Comparator.<Map.Entry<Long, BigDecimal>>comparingInt(e -> a.productOrders.get(e.getKey()).size()).reversed().thenComparing(Map.Entry::getKey)).limit(10).forEach(entry -> {
                         Long id = entry.getKey(); BigDecimal prior = b.products.getOrDefault(id, BigDecimal.ZERO);
                         int recentOrders = a.productOrders.getOrDefault(id, Set.of()).size(), priorOrders = b.productOrders.getOrDefault(id, Set.of()).size();
-                        boolean enough = recentOrders >= 10 && priorOrders >= 10;
+                        Set<String> observedUnits = new HashSet<>(a.quantityUnits.getOrDefault(id, Set.of()));
+                        observedUnits.addAll(b.quantityUnits.getOrDefault(id, Set.of()));
+                        boolean comparable = observedUnits.size() == 1 && !observedUnits.contains("unknown");
+                        String unit = comparable ? observedUnits.iterator().next() : "Mixed or unknown units";
+                        boolean enough = comparable && recentOrders >= 10 && priorOrders >= 10;
                         productComparisons.add(new ProductComparison(id, catalog.get(id).getName(), recent.month(), previous.month(),
-                                entry.getValue(), prior, recentOrders, priorOrders, enough,
-                                enough ? change(entry.getValue(), recent.days(), prior, previous.days()) : null, quantityUnit(catalog.get(id))));
+                                comparable ? entry.getValue() : null, comparable ? prior : null, recentOrders, priorOrders, enough,
+                                enough ? change(entry.getValue(), recent.days(), prior, previous.days()) : null, unit));
                     });
         }
         String status = !twoCycles
@@ -77,10 +82,6 @@ public final class HistoricalSalesAnalysis {
                 : "Some calendar months repeat a higher/lower pattern across two annual cycles. This is exploratory evidence, not proof of seasonal demand or a forecast.";
         return new History((int) months.stream().filter(Month::complete).count(), twoCycles, months, comparisons, patterns, productComparisons, status,
                 "Completed calendar months in the store timezone only. Missing coverage is unknown, not zero sales. Store-wide year-over-year changes compare distinct included orders per calendar day, accounting for month length and leap years. Recurring patterns require both monthly daily rates to be at least 20% above or below their respective 12-month daily averages. Product comparisons retain each product’s quantity unit and need 10 included orders per product in both periods. These are sample-size heuristics, not statistical significance tests; promotions, stockouts, assortment changes and store closures are not controlled.", "ORDERS");
-    }
-    private static String quantityUnit(Product p) {
-        return p.getCloverDetails() != null && "PER_UNIT".equals(p.getCloverDetails().priceType())
-                ? Objects.toString(p.getCloverDetails().unitName(), "provider units") : "items";
     }
     private static BigDecimal daily(BigDecimal units, int days) { return units.divide(BigDecimal.valueOf(days), 3, RoundingMode.HALF_UP); }
     private static BigDecimal change(BigDecimal current, int currentDays, BigDecimal prior, int priorDays) {
@@ -93,6 +94,7 @@ public final class HistoricalSalesAnalysis {
     }
     private static class Bucket {
         Set<String> orders = new HashSet<>();
+        Map<Long, Set<String>> quantityUnits = new HashMap<>();
         Map<Long, BigDecimal> products = new HashMap<>();
         Map<Long, Set<String>> productOrders = new HashMap<>();
     }

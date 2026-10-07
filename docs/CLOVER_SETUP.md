@@ -100,3 +100,9 @@ References: [Clover inventory money format](https://docs.clover.com/dev/docs/man
 V16 adds a persisted retry cursor. If a paid order has unsupported quantities, missing product matches or malformed required fields, subsequent imports repeat the affected window rather than advancing past the missing data. The warning blocks AI generation until that window imports cleanly. Unpaid, refunded, test, deleted, fee and out-of-coverage records are intentional exclusions and do not create this warning. Failed provider requests roll back the sales transaction and preserve its cursor.
 
 For existing connections V16 schedules one re-read from the stored coverage start, because older versions could clear a warning without retrying the original omissions. No history before that coverage is invented. Re-reading is idempotent by order/line identity. A permanently unsupported paid line keeps the retry window open, which increases provider traffic; inspect catalog/quantity issues and load-test larger histories before release. This is recovery for incomplete imports, not a claim that every Clover sale is supported.
+
+## Historical quantity units
+
+V17 stores each sales line's measurement unit separately from the current catalog. Existing rows start unknown; connected stores re-read the stored coverage window to recover provider units where available. Weighted lines without a unit stay unknown. Splynt does not guess past units from today's product settings or convert ounces/pounds automatically.
+
+Current and yearly product quantity totals/rates are withheld when a comparison mixes units or includes unknown units. Stock-cover estimates additionally require the historical unit to match current inventory metadata. Distinct-order rankings/timing/monthly patterns remain available. These guards prevent a catalog measurement change from silently rewriting the meaning of old sales. Missing provider history can remain unknown after re-import.

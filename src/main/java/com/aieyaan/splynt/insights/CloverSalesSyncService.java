@@ -57,11 +57,18 @@ public class CloverSalesSyncService {
                 var product = products.findByStoreIdAndCloverItemId(storeId, itemId);
                 BigDecimal units = units(line);
                 if (product.isEmpty() || units == null) { skipped++; continue; }
-                sales.save(new SalesEvent(storeId, product.get().getId(), id, lineId, units, occurred));
+                sales.save(new SalesEvent(storeId, product.get().getId(), id, lineId, units, occurred, quantityUnit(line)));
             }
         }
         connection.recordSalesRetry(cursor, skipped > 0);
         connection.markSalesSynchronized(started, coverage, skipped);
+    }
+    static String quantityUnit(JsonNode line) {
+        String unit = line.path("unitName").asText("").trim().toLowerCase(java.util.Locale.ROOT);
+        if (!unit.isBlank()) return unit.length() <= 64 ? unit : null;
+        // Only the sale snapshot can identify its historical measurement; never infer
+        // a past weighted unit from the product's current catalog settings.
+        return "PER_UNIT".equals(line.path("item").path("priceType").asText()) ? null : "items";
     }
     static BigDecimal units(JsonNode line) {
         BigDecimal value;
