@@ -28,9 +28,31 @@ public class CloverInventoryClient {
     }
 
     public JsonNode getItems(Long storeId) {
-        return getAllPages(storeId,
-                "/v3/merchants/{merchantId}/items?expand=categories"
-        );
+        JsonNode catalog = getAllPages(storeId, "/v3/merchants/{merchantId}/items");
+        var categoriesByItem = new java.util.HashMap<String, tools.jackson.databind.node.ArrayNode>();
+        var mapper = new tools.jackson.databind.json.JsonMapper();
+        // Page associations explicitly: nested expansions are not a completeness guarantee.
+        // Traverse by category rather than issuing an extra request for every inventory item.
+        for (JsonNode category : getAllPages(storeId, "/v3/merchants/{merchantId}/categories").path("elements")) {
+            String categoryId = category.path("id").asText("");
+            if (!categoryId.matches("[A-Za-z0-9_-]{1,64}"))
+                throw new IllegalStateException("Invalid Clover category identifier");
+            for (JsonNode item : getAllPages(storeId,
+                    "/v3/merchants/{merchantId}/categories/" + categoryId + "/items").path("elements")) {
+                String itemId = item.path("id").asText("");
+                if (itemId.isBlank()) throw new IllegalStateException("Invalid Clover category association");
+                categoriesByItem.computeIfAbsent(itemId, ignored -> mapper.createArrayNode()).add(category);
+            }
+        }
+        // Publish the snapshot only once every category and association page succeeded.
+        for (JsonNode item : catalog.path("elements")) {
+            if (item instanceof tools.jackson.databind.node.ObjectNode object) {
+                var categories = mapper.createObjectNode();
+                categories.set("elements", categoriesByItem.getOrDefault(item.path("id").asText(""), mapper.createArrayNode()));
+                object.set("categories", categories);
+            }
+        }
+        return catalog;
     }
 
     public JsonNode getItemStocks(Long storeId) {
