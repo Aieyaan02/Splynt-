@@ -27,6 +27,7 @@ class StoreOnboardingAcceptanceTest {
     static final String MERCHANT = "acceptance-" + UUID.randomUUID();
     static final HttpServer provider;
     static volatile int quantity = 2;
+    static volatile boolean failStocks;
     static {
         try {
             provider = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -40,6 +41,8 @@ class StoreOnboardingAcceptanceTest {
                     status = 401; body = "{}";
                 } else if (path.equals("/v3/merchants/" + MERCHANT)) {
                     body = "{\"id\":\"" + MERCHANT + "\"}";
+                } else if (path.endsWith("/item_stocks") && failStocks) {
+                    status = 503; body = "private provider diagnostics";
                 } else if (path.endsWith("/item_stocks")) {
                     body = "{\"elements\":[{\"item\":{\"id\":\"coffee\"},\"quantity\":" + quantity + "}]}";
                 } else if (path.endsWith("/properties")) {
@@ -114,12 +117,26 @@ class StoreOnboardingAcceptanceTest {
         Account outsider = registerAndLogin();
         mvc.perform(get(products).header("Authorization", "Bearer " + outsider.token())).andExpect(status().isForbidden());
         mvc.perform(post(integration + "/sync").header("Authorization", "Bearer " + outsider.token())).andExpect(status().isForbidden());
+        var lastStatus = json.readTree(mvc.perform(get(integration).header("Authorization", auth))
+                .andReturn().getResponse().getContentAsString());
+        failStocks = true;
+        try {
+            mvc.perform(post(integration + "/sync").header("Authorization", auth)).andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.message").value("Inventory could not be refreshed. Retry, or reconnect Clover if access expired."));
+            mvc.perform(get(products + "/low-stock").header("Authorization", auth)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].quantity").value(2)).andExpect(jsonPath("$[0].stockKnown").value(true));
+            mvc.perform(get(integration).header("Authorization", auth)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.lastSyncedAt").value(lastStatus.path("lastSyncedAt").asText()))
+                    .andExpect(jsonPath("$.lastSyncError").isNotEmpty());
+        } finally { failStocks = false; }
         quantity = 12;
         mvc.perform(post(integration + "/sync").header("Authorization", auth)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.created").value(0)).andExpect(jsonPath("$.updated").value(1));
         mvc.perform(get(products + "/low-stock").header("Authorization", auth)).andExpect(status().isOk()).andExpect(content().json("[]"));
         mvc.perform(get(products).header("Authorization", auth)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].quantity").value(12));
+        mvc.perform(get(integration).header("Authorization", auth)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.lastSyncError").isEmpty());
         // Repeating the same snapshot must not duplicate history or invent sales.
         mvc.perform(post(integration + "/sync").header("Authorization", auth)).andExpect(status().isOk());
         var catalog = json.readTree(mvc.perform(get(products).header("Authorization", auth))

@@ -61,7 +61,9 @@ class AdviceConcurrencyTest {
             var firstResult = first.get(10, TimeUnit.SECONDS);
             var secondResult = second.get(10, TimeUnit.SECONDS);
             assertFalse(firstResult.canGenerate()); assertFalse(secondResult.canGenerate());
-            assertEquals(firstResult.nextGenerationAt().toInstant(), secondResult.nextGenerationAt().toInstant());
+            // Linux clocks can supply nanoseconds; database timestamps persist microseconds.
+            assertTrue(Duration.between(firstResult.nextGenerationAt(), secondResult.nextGenerationAt()).abs().toNanos() <= 1_000,
+                    "Both requests must observe the same cooldown, allowing database timestamp rounding");
             if (providerFails) {
                 assertNull(firstResult.report()); assertNull(secondResult.report());
                 assertNotNull(secondResult.error()); assertFalse(secondResult.error().contains("Private"));

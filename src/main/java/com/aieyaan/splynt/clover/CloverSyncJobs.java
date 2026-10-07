@@ -7,6 +7,7 @@ import com.aieyaan.splynt.clover.dto.CloverSyncResponse;
 
 @Service
 public class CloverSyncJobs {
+    private static final String INVENTORY_FAILURE = "Inventory could not be refreshed. Retry, or reconnect Clover if access expired.";
     private final CloverInventorySyncService sync;
     private final CloverOAuthCredentialRepository credentials;
     private final TransactionTemplate transactions;
@@ -30,8 +31,8 @@ public class CloverSyncJobs {
             return result;
         } catch (RuntimeException failure) {
             transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId).ifPresent(connection ->
-                    connection.markSyncFailed("Inventory could not be refreshed. Retry, or reconnect Clover if access expired.")));
-            throw failure;
+                    connection.markSyncFailed(INVENTORY_FAILURE)));
+            throw new IllegalStateException(INVENTORY_FAILURE, failure);
         }
     }
 }

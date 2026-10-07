@@ -86,4 +86,11 @@ class CloverImportReviewHttpTest {
         jobs.run(store.getId());
         mvc.perform(get(path()).with(jwt().jwt(j -> j.subject("999999")))).andExpect(status().isForbidden());
     }
+    @Test void manualSyncFailureDoesNotExposeInternalDiagnostics() throws Exception {
+        when(sync.synchronize(store.getId())).thenThrow(new IllegalArgumentException("private SQL and provider token"));
+        mvc.perform(post(path() + "/sync").with(jwt().jwt(j -> j.subject(owner.getId().toString()))))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("Inventory could not be refreshed. Retry, or reconnect Clover if access expired."));
+    }
+
 }
