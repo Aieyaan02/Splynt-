@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { syncRefresh } from "../lib/syncRefresh";
 import { cloverApi, type CloverConnection } from "../lib/api";
 
 interface CloverAutoSyncProps {
@@ -17,20 +18,20 @@ export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAut
     useEffect(() => {
         if (storeId === null) return;
         let cancelled = false;
-        let lastSeen: string | null = null;
+        const snapshot = syncRefresh();
+        let pending = false;
         async function refresh() {
+            if (pending || cancelled) return;
+            pending = true;
             try {
                 const result = await cloverApi.status(storeId!);
                 if (cancelled) return;
                 setConnection(result);
                 setError("");
-                if (result.lastSyncedAt && result.lastSyncedAt !== lastSeen) {
-                    lastSeen = result.lastSyncedAt;
-                    await onRefresh.current();
-                }
+                await snapshot.run(result.lastSyncedAt, () => onRefresh.current());
             } catch (failure) {
                 if (!cancelled) setError(failure instanceof Error ? failure.message : "Unable to check Clover connection.");
-            }
+            } finally { pending = false; }
         }
         void refresh();
         const interval = window.setInterval(() => void refresh(), 10_000);

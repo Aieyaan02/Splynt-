@@ -201,3 +201,7 @@ Validation: existing backend suite, three new database replay/concurrency tests,
 ### Session recovery and expiration
 
 Authenticated 401 responses now notify the application, remove the expired token and return to sign-in with an explanation. A late response from an old token cannot clear a newer login. Startup network/service failures retain the token and show retry or account-switch actions, instead of silently signing out. Malformed error JSON preserves the HTTP status. Public login failures do not invalidate an existing session. Node tests cover expiration, token races, transient failures, public-login failure and malformed responses; UI browser acceptance remains pending.
+
+### Dashboard refresh after provider sync
+
+The Clover connection poll now waits for its prior check and dashboard refresh to settle before starting another check. A completed provider timestamp is acknowledged only after the dashboard read succeeds; failed reads retry at the next poll even when Clover has not produced a newer import. The dashboard callback propagates failures to this tracker. Node tests cover failed-read retry, overlapping refresh calls, newer snapshots and missing initial imports. Frontend tests (11), lint and build pass; browser acceptance remains outstanding.

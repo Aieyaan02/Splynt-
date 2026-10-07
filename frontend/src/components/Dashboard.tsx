@@ -448,7 +448,7 @@ export function Dashboard({
                         key={selectedStoreId}
                         canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"}
                         storeId={selectedStoreId}
-                        onSynchronized={loadInventory}
+                        onSynchronized={() => loadInventory(true)}
                     />
 
                 </section>
