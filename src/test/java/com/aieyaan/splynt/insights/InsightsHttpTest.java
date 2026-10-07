@@ -59,11 +59,11 @@ class InsightsHttpTest {
     @Test void endpointUsesOnlyTheRequestedStoresHistoricalSales() throws Exception {
         mvc.perform(get("/api/stores/" + store.getId() + "/insights").with(jwt().jwt(j -> j.subject(owner.getId().toString()))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.storeName").value("Our store"))
-                .andExpect(jsonPath("$.history.months[23].units").value(10))
+                .andExpect(jsonPath("$.history.metric").value("ORDERS"))
                 .andExpect(jsonPath("$.history.months[23].orders").value(1));
         var source = insights.read(store.getId());
-        assertEquals(0, source.history().months().stream().map(HistoricalSalesAnalysis.Month::units)
-                .filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add).compareTo(BigDecimal.TEN));
+        assertEquals(1, source.history().months().stream().map(HistoricalSalesAnalysis.Month::orders)
+                .filter(Objects::nonNull).mapToInt(Integer::intValue).sum());
     }
     @Test void ownerCannotReadAnotherOrganizationsInsights() throws Exception {
         mvc.perform(get("/api/stores/" + other.getId() + "/insights").with(jwt().jwt(j -> j.subject(owner.getId().toString()))))

@@ -20,7 +20,7 @@ public final class HistoricalSalesAnalysis {
             YearMonth month = YearMonth.from(event.getOccurredAt().atZoneSameInstant(zone));
             Bucket bucket = buckets.get(month);
             if (bucket == null) continue;
-            bucket.units = bucket.units.add(event.getUnits()); bucket.orders.add(event.getOrderId());
+            bucket.orders.add(event.getOrderId());
             bucket.products.merge(event.getProductId(), event.getUnits(), BigDecimal::add);
             bucket.productOrders.computeIfAbsent(event.getProductId(), ignored -> new HashSet<>()).add(event.getOrderId());
         }
@@ -29,14 +29,14 @@ public final class HistoricalSalesAnalysis {
             var month = entry.getKey(); var bucket = entry.getValue();
             boolean complete = coverage != null && !month.atDay(1).isBefore(firstDay) && !month.plusMonths(1).atDay(1).isAfter(end);
             months.add(new Month(month.toString(), complete, month.lengthOfMonth(), complete ? bucket.orders.size() : null,
-                    complete ? bucket.units : null, complete ? daily(bucket.units, month.lengthOfMonth()) : null));
+                    complete ? daily(BigDecimal.valueOf(bucket.orders.size()), month.lengthOfMonth()) : null));
         }
         List<Comparison> comparisons = new ArrayList<>();
         for (int i = 12; i < 24; i++) {
             Month recent = months.get(i), previous = months.get(i - 12);
             boolean sufficient = recent.complete() && previous.complete() && recent.orders() >= 30 && previous.orders() >= 30;
             comparisons.add(new Comparison(recent.month(), previous.month(), sufficient,
-                    sufficient ? change(recent.units(), recent.days(), previous.units(), previous.days()) : null));
+                    sufficient ? change(BigDecimal.valueOf(recent.orders()), recent.days(), BigDecimal.valueOf(previous.orders()), previous.days()) : null));
         }
         boolean twoCycles = months.stream().allMatch(m -> m.complete() && m.orders() >= 30);
         List<Pattern> patterns = new ArrayList<>();
@@ -44,7 +44,7 @@ public final class HistoricalSalesAnalysis {
             BigDecimal[] baseline = new BigDecimal[2];
             for (int cycle = 0; cycle < 2; cycle++) {
                 BigDecimal total = BigDecimal.ZERO; int days = 0;
-                for (int i = cycle * 12; i < (cycle + 1) * 12; i++) { total = total.add(months.get(i).units()); days += months.get(i).days(); }
+                for (int i = cycle * 12; i < (cycle + 1) * 12; i++) { total = total.add(BigDecimal.valueOf(months.get(i).orders())); days += months.get(i).days(); }
                 baseline[cycle] = total.divide(BigDecimal.valueOf(days), 12, RoundingMode.HALF_UP);
             }
             for (int i = 0; i < 12; i++) {
@@ -62,13 +62,13 @@ public final class HistoricalSalesAnalysis {
         if (recent.complete() && previous.complete()) {
             Bucket a = buckets.get(until.minusMonths(1)), b = buckets.get(until.minusMonths(13));
             a.products.entrySet().stream().filter(e -> catalog.containsKey(e.getKey()))
-                    .sorted(Map.Entry.<Long, BigDecimal>comparingByValue().reversed()).limit(10).forEach(entry -> {
+                    .sorted(Comparator.<Map.Entry<Long, BigDecimal>>comparingInt(e -> a.productOrders.get(e.getKey()).size()).reversed().thenComparing(Map.Entry::getKey)).limit(10).forEach(entry -> {
                         Long id = entry.getKey(); BigDecimal prior = b.products.getOrDefault(id, BigDecimal.ZERO);
                         int recentOrders = a.productOrders.getOrDefault(id, Set.of()).size(), priorOrders = b.productOrders.getOrDefault(id, Set.of()).size();
                         boolean enough = recentOrders >= 10 && priorOrders >= 10;
                         productComparisons.add(new ProductComparison(id, catalog.get(id).getName(), recent.month(), previous.month(),
                                 entry.getValue(), prior, recentOrders, priorOrders, enough,
-                                enough ? change(entry.getValue(), recent.days(), prior, previous.days()) : null));
+                                enough ? change(entry.getValue(), recent.days(), prior, previous.days()) : null, quantityUnit(catalog.get(id))));
                     });
         }
         String status = !twoCycles
@@ -76,7 +76,11 @@ public final class HistoricalSalesAnalysis {
                 : patterns.isEmpty() ? "Two full annual cycles are available, but no month repeats a higher/lower pattern under the stated rule."
                 : "Some calendar months repeat a higher/lower pattern across two annual cycles. This is exploratory evidence, not proof of seasonal demand or a forecast.";
         return new History((int) months.stream().filter(Month::complete).count(), twoCycles, months, comparisons, patterns, productComparisons, status,
-                "Completed calendar months in the store timezone only. Missing coverage is unknown, not zero sales. Year-over-year changes compare units per calendar day, accounting for month length and leap years. Recurring patterns require both monthly daily rates to be at least 20% above or below their respective 12-month daily averages. Product comparisons need 10 included orders per product in both periods. These are sample-size heuristics, not statistical significance tests; promotions, stockouts, assortment changes and store closures are not controlled.");
+                "Completed calendar months in the store timezone only. Missing coverage is unknown, not zero sales. Store-wide year-over-year changes compare distinct included orders per calendar day, accounting for month length and leap years. Recurring patterns require both monthly daily rates to be at least 20% above or below their respective 12-month daily averages. Product comparisons retain each product’s quantity unit and need 10 included orders per product in both periods. These are sample-size heuristics, not statistical significance tests; promotions, stockouts, assortment changes and store closures are not controlled.", "ORDERS");
+    }
+    private static String quantityUnit(Product p) {
+        return p.getCloverDetails() != null && "PER_UNIT".equals(p.getCloverDetails().priceType())
+                ? Objects.toString(p.getCloverDetails().unitName(), "provider units") : "items";
     }
     private static BigDecimal daily(BigDecimal units, int days) { return units.divide(BigDecimal.valueOf(days), 3, RoundingMode.HALF_UP); }
     private static BigDecimal change(BigDecimal current, int currentDays, BigDecimal prior, int priorDays) {
@@ -85,19 +89,18 @@ public final class HistoricalSalesAnalysis {
                 .subtract(BigDecimal.ONE).multiply(BigDecimal.valueOf(100)).setScale(1, RoundingMode.HALF_UP);
     }
     private static BigDecimal index(Month month, BigDecimal baseline) {
-        return baseline.signum() == 0 ? null : month.units().divide(BigDecimal.valueOf(month.days()), 12, RoundingMode.HALF_UP).divide(baseline, 8, RoundingMode.HALF_UP);
+        return baseline.signum() == 0 ? null : BigDecimal.valueOf(month.orders()).divide(BigDecimal.valueOf(month.days()), 12, RoundingMode.HALF_UP).divide(baseline, 8, RoundingMode.HALF_UP);
     }
     private static class Bucket {
-        BigDecimal units = BigDecimal.ZERO;
         Set<String> orders = new HashSet<>();
         Map<Long, BigDecimal> products = new HashMap<>();
         Map<Long, Set<String>> productOrders = new HashMap<>();
     }
-    public record Month(String month, boolean complete, int days, Integer orders, BigDecimal units, BigDecimal unitsPerDay) {}
-    public record Comparison(String month, String previousMonth, boolean sufficient, BigDecimal dailyUnitsChangePercent) {}
+    public record Month(String month, boolean complete, int days, Integer orders, BigDecimal ordersPerDay) {}
+    public record Comparison(String month, String previousMonth, boolean sufficient, BigDecimal dailyOrdersChangePercent) {}
     public record Pattern(int calendarMonth, String direction, BigDecimal earlierIndex, BigDecimal latestIndex) {}
     public record ProductComparison(Long productId, String name, String month, String previousMonth, BigDecimal units, BigDecimal previousUnits,
-            int orders, int previousOrders, boolean sufficient, BigDecimal dailyUnitsChangePercent) {}
+            int orders, int previousOrders, boolean sufficient, BigDecimal dailyUnitsChangePercent, String unit) {}
     public record History(int completeMonths, boolean sufficientForRecurringPatterns, List<Month> months, List<Comparison> comparisons,
-            List<Pattern> recurringPatterns, List<ProductComparison> productComparisons, String status, String methodology) {}
+            List<Pattern> recurringPatterns, List<ProductComparison> productComparisons, String status, String methodology, String metric) {}
 }
