@@ -66,6 +66,25 @@ class InsightsServiceTest {
         var summary = InsightsService.calculate(List.of(), Map.of(), zone, window.start(), window.end());
         assertEquals(2, summary.completeDays());
     }
+    @Test void timingAndLeadersUseOrdersRatherThanAddingUnlikeQuantities() {
+        Product weighted = mock(Product.class), counted = mock(Product.class);
+        when(weighted.getId()).thenReturn(1L); when(weighted.getName()).thenReturn("Bulk spice");
+        when(weighted.getCloverDetails()).thenReturn(new com.aieyaan.splynt.product.CloverCatalogDetails(null, null, "oz", "PER_UNIT", true, false, List.of()));
+        when(counted.getId()).thenReturn(2L); when(counted.getName()).thenReturn("Bottles");
+        var at = OffsetDateTime.parse("2026-09-02T14:00:00Z");
+        var events = List.of(new SalesEvent(1L, 1L, "one", "a", new BigDecimal("1000"), at),
+                new SalesEvent(1L, 1L, "one", "b", new BigDecimal("2000"), at),
+                new SalesEvent(1L, 2L, "one", "c", BigDecimal.ONE, at),
+                new SalesEvent(1L, 2L, "two", "d", BigDecimal.ONE, at));
+        var result = InsightsService.calculate(events, Map.of(1L, weighted, 2L, counted), zone,
+                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 1));
+        assertEquals(new BigDecimal("2"), result.hourlyOrders().get(10));
+        assertEquals(new BigDecimal("2"), result.weekdayOrders().get(2));
+        assertEquals(2L, result.topProducts().getFirst().productId());
+        assertEquals(2, result.topProducts().getFirst().orders());
+        assertEquals("oz", result.topProducts().get(1).unit());
+        assertEquals(new BigDecimal("3000"), result.topProducts().get(1).units());
+    }
     private SalesEvent event(String order, String at, String quantity) {
         return new SalesEvent(1L, 1L, order, UUID.randomUUID().toString(), new BigDecimal(quantity), OffsetDateTime.parse(at));
     }

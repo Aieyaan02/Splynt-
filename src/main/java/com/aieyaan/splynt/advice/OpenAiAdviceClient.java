@@ -34,7 +34,7 @@ public class OpenAiAdviceClient {
                 Give concrete inventory/merchandising actions and 1-3 small product experiments when evidence supports a hypothesis.
                 Every action and experiment must cite at least one exact evidence ID. Do not invent metrics or evidence IDs.
                 Product experiments are unproven ideas: never promise more sales or claim local demand without supporting data.
-                Consider top sellers and local hour/day patterns. Location is context, not evidence of demographic preferences.
+                Consider products ranked by distinct included orders and local hour/day order counts. Product quantities have their own unit; never add or compare unlike physical units. Location is context, not evidence of demographic preferences.
                 Do not infer seasonality from a single rolling window or assume hemisphere/weather from a country alone.
                 Use supplied calendar-month comparisons when available, but do not present correlations as causes or forecasts. Seasonal limitations must appear in limitations. No external market, competitor, weather or supplier data is available.
                 Do not claim an idea is absent from the store's full catalog: only leading products are supplied.

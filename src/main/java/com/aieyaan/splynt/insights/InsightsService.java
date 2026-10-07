@@ -63,6 +63,9 @@ public class InsightsService {
     static Summary calculate(List<SalesEvent> events, Map<Long, Product> catalog, ZoneId zone, LocalDate start, LocalDate end) {
         int days = (int) ChronoUnit.DAYS.between(start, end);
         Map<Long, BigDecimal> totals = new HashMap<>();
+        Map<Long, Set<String>> productOrders = new HashMap<>();
+        BigDecimal[] hourlyOrders = new BigDecimal[24]; Arrays.fill(hourlyOrders, BigDecimal.ZERO);
+        BigDecimal[] weekdayOrders = new BigDecimal[7]; Arrays.fill(weekdayOrders, BigDecimal.ZERO);
         BigDecimal[] hourly = new BigDecimal[24]; Arrays.fill(hourly, BigDecimal.ZERO);
         BigDecimal[] weekdays = new BigDecimal[7]; Arrays.fill(weekdays, BigDecimal.ZERO);
         Set<String> orders = new HashSet<>();
@@ -73,24 +76,38 @@ public class InsightsService {
             hourly[local.getHour()] = hourly[local.getHour()].add(event.getUnits());
             int day = local.getDayOfWeek().getValue() - 1;
             weekdays[day] = weekdays[day].add(event.getUnits());
-            orders.add(event.getOrderId());
+            productOrders.computeIfAbsent(event.getProductId(), ignored -> new HashSet<>()).add(event.getOrderId());
+            if (orders.add(event.getOrderId())) {
+                hourlyOrders[local.getHour()] = hourlyOrders[local.getHour()].add(BigDecimal.ONE);
+                weekdayOrders[day] = weekdayOrders[day].add(BigDecimal.ONE);
+            }
         }
         boolean sufficient = days >= 14 && orders.size() >= 30;
         List<ProductInsight> leaders = totals.entrySet().stream().filter(e -> catalog.containsKey(e.getKey()))
-                .sorted(Map.Entry.<Long, BigDecimal>comparingByValue().reversed()).limit(10)
+                .sorted(Comparator.<Map.Entry<Long, BigDecimal>>comparingInt(e -> productOrders.get(e.getKey()).size()).reversed().thenComparing(Map.Entry::getKey)).limit(10)
                 .map(e -> {
                     Product p = catalog.get(e.getKey());
                     BigDecimal velocity = sufficient ? e.getValue().divide(BigDecimal.valueOf(days), 3, RoundingMode.HALF_UP) : null;
                     BigDecimal cover = !p.isStockKnown() || velocity == null || velocity.signum() == 0 ? null
                             : p.getQuantity().max(BigDecimal.ZERO).divide(velocity, 1, RoundingMode.HALF_UP);
-                    return new ProductInsight(p.getId(), p.getName(), e.getValue(), velocity, cover, p.isStockKnown() ? p.getQuantity() : null);
+                    return new ProductInsight(p.getId(), p.getName(), e.getValue(), velocity, cover, p.isStockKnown() ? p.getQuantity() : null, productOrders.get(e.getKey()).size(), p.getCloverDetails() != null && "PER_UNIT".equals(p.getCloverDetails().priceType()) ? Objects.toString(p.getCloverDetails().unitName(), "provider units") : "items");
                 }).toList();
         BigDecimal total = totals.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new Summary(days, orders.size(), total, sufficient, leaders, List.of(hourly), List.of(weekdays));
+        return new Summary(days, orders.size(), total, sufficient, leaders, List.of(hourly), List.of(weekdays), List.of(hourlyOrders), List.of(weekdayOrders));
     }
-    public record ProductInsight(Long productId, String name, BigDecimal units, BigDecimal unitsPerDay, BigDecimal estimatedDaysRemaining, BigDecimal currentStock) {}
+    public record ProductInsight(Long productId, String name, BigDecimal units, BigDecimal unitsPerDay, BigDecimal estimatedDaysRemaining, BigDecimal currentStock, int orders, String unit) {
+        public ProductInsight(Long id, String name, BigDecimal units, BigDecimal perDay, BigDecimal cover, BigDecimal stock) {
+            this(id, name, units, perDay, cover, stock, 0, "items");
+        }
+    }
     public record Summary(int completeDays, int orders, BigDecimal units, boolean sufficientForVelocity,
-            List<ProductInsight> topProducts, List<BigDecimal> hourlyUnits, List<BigDecimal> weekdayUnits) {}
+            List<ProductInsight> topProducts, List<BigDecimal> hourlyUnits, List<BigDecimal> weekdayUnits,
+            List<BigDecimal> hourlyOrders, List<BigDecimal> weekdayOrders) {
+        public Summary(int days, int orders, BigDecimal units, boolean sufficient, List<ProductInsight> products,
+                List<BigDecimal> hours, List<BigDecimal> weekdays) {
+            this(days, orders, units, sufficient, products, hours, weekdays, Collections.nCopies(24, BigDecimal.ZERO), Collections.nCopies(7, BigDecimal.ZERO));
+        }
+    }
     public record Insights(String storeName, String location, String timezone, OffsetDateTime lastSyncedAt, String syncError,
             LocalDate from, LocalDate untilExclusive, Summary summary, String methodology, String seasonalStatus, HistoricalSalesAnalysis.History history) {}
 }

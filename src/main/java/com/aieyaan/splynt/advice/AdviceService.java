@@ -52,9 +52,9 @@ public class AdviceService {
     static Map<String, Object> evidence(InsightsService.Insights source) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("window", Map.of("from", source.from().toString(), "untilExclusive", source.untilExclusive().toString(),
-                "completeDays", source.summary().completeDays(), "orders", source.summary().orders(), "units", source.summary().units()));
+                "completeDays", source.summary().completeDays(), "orders", source.summary().orders()));
         data.put("location", Map.of("location", source.location(), "timezone", source.timezone(), "meaning", "Store context only; no local market demand data"));
-        data.put("timing", Map.of("hourlyUnits", source.summary().hourlyUnits(), "weekdayUnitsMondayFirst", source.summary().weekdayUnits(),
+        data.put("timing", Map.of("hourlyOrders", source.summary().hourlyOrders(), "weekdayOrdersMondayFirst", source.summary().weekdayOrders(),
                 "methodology", source.methodology()));
         data.put("seasonality", source.history());
         for (var product : source.summary().topProducts()) data.put("product-" + product.productId(), product);
