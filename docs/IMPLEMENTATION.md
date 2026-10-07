@@ -197,3 +197,7 @@ Next work: editable product settings/stock targets, visible inventory history, a
 Manual sale/restock requests accept an optional UUID requestId, scoped to store and product. The inventory dialog retains that ID across retries while open. The server locks the product, records the ID with the movement, and returns the original movement on replay without changing stock again. Reusing the ID with a different quantity, note, or operation is rejected. Responses contain the current product balance and original movement. Legacy requests without an ID retain their previous behavior; reopening the dialog creates a new ID, so this is not a guarantee across reloads. Clover-owned stock remains read-only.
 
 Validation: existing backend suite, three new database replay/concurrency tests, frontend retry tests, lint and production build. PostgreSQL replay tests are included in hosted CI. Live browser and provider acceptance remain outstanding.
+
+### Session recovery and expiration
+
+Authenticated 401 responses now notify the application, remove the expired token and return to sign-in with an explanation. A late response from an old token cannot clear a newer login. Startup network/service failures retain the token and show retry or account-switch actions, instead of silently signing out. Malformed error JSON preserves the HTTP status. Public login failures do not invalidate an existing session. Node tests cover expiration, token races, transient failures, public-login failure and malformed responses; UI browser acceptance remains pending.

@@ -12,6 +12,8 @@ import type {
     RegisterResponse
 } from "../types";
 
+export const SESSION_EXPIRED_EVENT = "splynt:session-expired";
+
 const TOKEN_KEY = "splynt.accessToken";
 
 export class ApiRequestError extends Error {
@@ -56,8 +58,9 @@ async function request<T>(
         headers.set("Content-Type", "application/json");
     }
 
+    const requestToken = authenticated ? getAccessToken() : null;
     if (authenticated) {
-        const token = getAccessToken();
+        const token = requestToken;
 
         if (token) {
             headers.set(
@@ -72,23 +75,31 @@ async function request<T>(
         headers
     });
 
+    // A late failure from an older session must not clear a newer login.
+    if (response.status === 401 && authenticated && requestToken
+        && getAccessToken() === requestToken) {
+        clearAccessToken();
+        window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    }
+
     const contentType =
         response.headers.get("content-type") ?? "";
 
     let responseBody: unknown = null;
 
     if (contentType.includes("application/json")) {
-        responseBody = await response.json();
+        try {
+            responseBody = await response.json();
+        } catch {
+            // Keep HTTP status semantics even when a proxy sends malformed JSON.
+            if (response.ok) throw new ApiRequestError("The server returned an unreadable response. Try again.", response.status);
+        }
     } else if (response.status !== 204) {
         const text = await response.text();
         responseBody = text || null;
     }
 
     if (!response.ok) {
-        if (response.status === 401 && authenticated) {
-            clearAccessToken();
-        }
-
         const apiError = isApiError(responseBody)
             ? responseBody
             : null;

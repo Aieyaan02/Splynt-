@@ -15,6 +15,7 @@ import type {
 
 interface AuthPageProps {
     onAuthenticated: (account: Account) => void;
+    notice?: string;
     initialMode?: "login" | "register";
 }
 
@@ -30,7 +31,7 @@ const initialRegistration: RegisterRequest = {
 };
 
 export function AuthPage({
-    onAuthenticated, initialMode = "login"
+    onAuthenticated, initialMode = "login", notice
 }: AuthPageProps) {
     const [mode, setMode] =
         useState<"login" | "register">(initialMode);
@@ -225,6 +226,7 @@ export function AuthPage({
                         </button>
                     </div>
 
+                    {notice && <p className="message" role="status">{notice}</p>}
                     {error && (
                         <div className="message error-message">
                             {error}
