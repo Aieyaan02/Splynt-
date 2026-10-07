@@ -1,5 +1,7 @@
 import type {
     Account,
+    InventoryMovement,
+    ProductSettings,
     ApiError,
     CreateProductRequest,
     InventoryChangeRequest,
@@ -147,6 +149,9 @@ export const accountApi = {
 };
 
 export const productApi = {
+    settings(storeId: number, productId: number, body: ProductSettings): Promise<Product> {
+        return request(`/api/stores/${storeId}/products/${productId}/settings`, { method: "PATCH", body: JSON.stringify(body) });
+    },
     getAll(storeId: number): Promise<Product[]> {
         return request<Product[]>(
             `/api/stores/${storeId}/products`
@@ -205,6 +210,9 @@ export const productApi = {
 };
 
 export const inventoryApi = {
+    history(storeId: number, productId: number): Promise<InventoryMovement[]> {
+        return request(`/api/stores/${storeId}/products/${productId}/inventory/movements`);
+    },
     recordSale(
         storeId: number,
         productId: number,
@@ -259,4 +267,15 @@ export const operationsApi = {
     inquiries(page: number): Promise<{ content: ContactInquiry[]; totalPages: number; number: number }> {
         return request(`/api/operations/inquiries?page=${page}`);
     }
+};
+
+export interface SalesInsights {
+    storeName: string; location: string; timezone: string; lastSyncedAt: string | null; syncError: string | null;
+    from: string; untilExclusive: string; methodology: string; seasonalStatus: string;
+    summary: { completeDays: number; orders: number; units: number; sufficientForVelocity: boolean;
+        topProducts: { productId: number; name: string; units: number; unitsPerDay: number | null; estimatedDaysRemaining: number | null; currentStock: number }[];
+        hourlyUnits: number[]; weekdayUnits: number[]; };
+}
+export const insightsApi = {
+    read(storeId: number): Promise<SalesInsights> { return request(`/api/stores/${storeId}/insights`); }
 };

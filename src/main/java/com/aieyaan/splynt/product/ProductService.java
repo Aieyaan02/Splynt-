@@ -85,6 +85,26 @@ public class ProductService {
         return ProductResponse.from(savedProduct);
     }
 
+    @Transactional
+    public ProductResponse updateSettings(Long storeId, Long productId,
+            com.aieyaan.splynt.product.dto.UpdateProductSettingsRequest request) {
+        Product product = getActiveProduct(storeId, productId);
+        if (product.getVersion() != request.version())
+            throw new org.springframework.dao.OptimisticLockingFailureException("Product changed since it was opened");
+        if (request.targetStock() < request.reorderLevel())
+            throw new IllegalArgumentException("Target stock cannot be lower than the reorder level");
+        // Clover owns imported catalog identity; local stock targets/costs belong to the retailer.
+        if (product.getSource() != ProductSource.CLOVER) {
+            product.setName(request.name().trim());
+            product.setBrand(normalizeOptionalText(request.brand()));
+            product.setCategory(normalizeOptionalText(request.category()));
+        }
+        product.setReorderLevel(request.reorderLevel());
+        product.setTargetStock(request.targetStock());
+        product.setUnitCost(request.unitCost());
+        return ProductResponse.from(productRepository.saveAndFlush(product));
+    }
+
     @Transactional(readOnly = true)
     public List<ProductResponse> getActiveProducts(Long storeId) {
         getActiveStore(storeId);

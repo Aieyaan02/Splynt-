@@ -57,6 +57,17 @@ class CloverInventoryClientTest {
         failSecondPage = true;
         assertThrows(IllegalStateException.class, () -> client.getItems(7L));
     }
+    @Test void salesCursorIsPreservedAsAFilterAlongsidePagination() {
+        server.createContext("/v3/merchants/merchant-seven/orders", exchange -> {
+            requests.add(exchange.getRequestURI().getQuery());
+            byte[] bytes = "{\"elements\":[]}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        assertEquals(0, client.getOrdersModifiedSince(7L, 123456789L).path("elements").size());
+        assertEquals("filter=modifiedTime>=123456789&limit=100&offset=0", requests.getFirst());
+    }
     @Test void refreshesOnlyRequestedStoresTokenOnUnauthorized() {
         rejectFirstToken = true;
         assertEquals(101, client.getItems(7L).path("elements").size());

@@ -1,3 +1,5 @@
+import { InsightsPanel } from "./InsightsPanel";
+import { ProductDetailsDialog } from "./ProductDetailsDialog";
 import { Brand } from "./Brand";
 import { CloverAutoSync } from "./CloverAutoSync";
 import {
@@ -97,6 +99,7 @@ export function Dashboard({
     const [archivedProducts, setArchivedProducts] =
         useState<Product[]>([]);
 
+    const [detailProduct, setDetailProduct] = useState<Product | null>(null);
     const [search, setSearch] = useState("");
     const [stockFilter, setStockFilter] = useState("all");
     const [categoryFilter, setCategoryFilter] = useState("");
@@ -290,7 +293,7 @@ export function Dashboard({
                             onChange={event => {
                                 requestGeneration.current++;
                                 setProducts([]); setLowStockProducts([]); setArchivedProducts([]);
-                                setInventorySelection(null); setProductDialogOpen(false);
+                                setInventorySelection(null); setProductDialogOpen(false); setDetailProduct(null);
                                 setSearch(""); setCategoryFilter(""); setStockFilter("all");
                                 activeStoreId.current = Number(event.target.value);
                                 setSelectedStoreId(Number(event.target.value));
@@ -534,7 +537,7 @@ export function Dashboard({
                                     className="low-stock-card"
                                     key={product.id}
                                 >
-                                    <h3>{product.name}</h3>
+                                    <h3><button type="button" className="product-name-button" onClick={() => setDetailProduct(product)}>{product.name} ↗</button></h3>
 
                                     <p>
                                         {product.category
@@ -631,9 +634,7 @@ export function Dashboard({
                                     {visibleProducts.map(product => (
                                         <tr key={product.id}>
                                             <td>
-                                                <strong>
-                                                    {product.name}
-                                                </strong>
+                                                <button type="button" className="product-name-button" onClick={() => setDetailProduct(product)}>{product.name} <span aria-hidden="true">↗</span></button>
 
                                                 <span>
                                                     {product.brand
@@ -690,9 +691,9 @@ export function Dashboard({
                                                         className="button secondary compact"
                                                         type="button"
                                                         disabled={
-                                                            product.quantity
-                                                            <= 0
+                                                            product.source === "CLOVER" || product.quantity <= 0
                                                         }
+                                                        title={product.source === "CLOVER" ? "Manage stock in Clover, then sync Splynt" : undefined}
                                                         onClick={() =>
                                                             openInventoryDialog(
                                                                 product,
@@ -706,6 +707,8 @@ export function Dashboard({
                                                     <button
                                                         className="button secondary compact"
                                                         type="button"
+                                                        disabled={product.source === "CLOVER"}
+                                                        title={product.source === "CLOVER" ? "Manage stock in Clover, then sync Splynt" : undefined}
                                                         onClick={() =>
                                                             openInventoryDialog(
                                                                 product,
@@ -746,6 +749,7 @@ export function Dashboard({
                     )}
                 </section>
 
+                {selectedStoreId !== null && <InsightsPanel key={selectedStoreId} storeId={selectedStoreId} />}
                 <section
                     id="archived-products-section"
                     className="content-card"
@@ -804,9 +808,7 @@ export function Dashboard({
                                     {archivedProducts.map(product => (
                                         <tr key={product.id}>
                                             <td>
-                                                <strong>
-                                                    {product.name}
-                                                </strong>
+                                                <button type="button" className="product-name-button" onClick={() => setDetailProduct(product)}>{product.name} <span aria-hidden="true">↗</span></button>
 
                                                 <span>
                                                     {product.brand
@@ -864,6 +866,12 @@ export function Dashboard({
                 </section>
             </main>
 
+            {detailProduct && selectedStoreId !== null && <ProductDetailsDialog
+                key={`${selectedStoreId}-${detailProduct.id}`}
+                product={detailProduct} storeId={selectedStoreId}
+                timezone={selectedStore?.timezone ?? "UTC"}
+                canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"}
+                onClose={() => setDetailProduct(null)} onSaved={loadInventory} />}
             {productDialogOpen
                 && selectedStoreId !== null && (
                 <ProductDialog

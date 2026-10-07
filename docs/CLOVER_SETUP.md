@@ -38,3 +38,11 @@ Inventory currently supports nonnegative whole units. Items with unknown, fracti
 ## Verification status
 
 Automated tests use a local HTTP simulator for authorization-code exchange, merchant verification, per-store credentials, wrong-browser/expired/replayed state, revoked roles, token encryption, and pagination failures. These do not establish approval or real-account connectivity in Clover. The end-to-end real merchant acceptance check remains required before release.
+
+### Sales-history permission and interpretation
+
+Enable Clover order-read permission before connecting a staging store to import sales history. Inventory imports remain available when order access is missing; the Sales insights panel reports the failure separately. V10 adds sales events and cursor state. The initial import includes orders created within the last 90 days; subsequent imports reread orders modified since the previous cursor with a five-minute overlap. Changed orders replace their previous events in one transaction.
+
+Only paid, non-refunded supported product lines are counted. Partially refunded orders are currently excluded rather than estimated. Ordinary line items count as one unit; per-unit quantities use Clover's thousandths representation. Unknown catalog items and unsupported quantities are skipped. No customer/payment details are persisted. Timing reflects order creation, not payment time.
+
+Dashboard calculations use up to 30 full local calendar days covered by the last successful import. Failed or stopped imports do not add zero-sale days. The dashboard shows the last import and date window; stock-cover estimates assume the observed average continues and are not demand forecasts. Seasonal and AI product recommendations remain future implementation work.

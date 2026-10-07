@@ -95,6 +95,7 @@ export type ProductSource =
 
 export interface Product {
     id: number;
+    version: number;
     storeId: number;
     barcode: string;
     name: string;
@@ -136,4 +137,13 @@ export interface ApiError {
     message?: string;
     path?: string;
     validationErrors?: Record<string, string>;
+}
+export interface InventoryMovement {
+    id: number; productId: number; movementType: "SALE" | "RESTOCK" | "ADJUSTMENT";
+    quantityChange: number; quantityBefore: number; quantityAfter: number;
+    source: "MANUAL" | "CLOVER" | "SYSTEM"; note: string | null; createdAt: string;
+}
+export interface ProductSettings {
+    version: number; name: string; brand: string | null; category: string | null;
+    reorderLevel: number; targetStock: number; unitCost: number | null;
 }

@@ -10,9 +10,10 @@ public class CloverSyncJobs {
     private final CloverInventorySyncService sync;
     private final CloverOAuthCredentialRepository credentials;
     private final TransactionTemplate transactions;
+    private final com.aieyaan.splynt.insights.CloverSalesSyncService sales;
     public CloverSyncJobs(CloverInventorySyncService sync, CloverOAuthCredentialRepository credentials,
-            PlatformTransactionManager transactionManager) {
-        this.sync = sync; this.credentials = credentials;
+            PlatformTransactionManager transactionManager, com.aieyaan.splynt.insights.CloverSalesSyncService sales) {
+        this.sync = sync; this.credentials = credentials; this.sales = sales;
         this.transactions = new TransactionTemplate(transactionManager);
     }
     public CloverSyncResponse run(Long storeId) {
@@ -23,6 +24,11 @@ public class CloverSyncJobs {
                 if (result.skipped() > 0) connection.markSyncFailed(result.skipped()
                         + " items skipped: archived, missing stock, or unsupported quantities. Review Clover inventory.");
             }));
+            try { sales.synchronize(storeId); }
+            catch (RuntimeException salesFailure) {
+                transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId)
+                        .ifPresent(connection -> connection.markSalesFailed()));
+            }
             return result;
         } catch (RuntimeException failure) {
             transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId).ifPresent(connection ->

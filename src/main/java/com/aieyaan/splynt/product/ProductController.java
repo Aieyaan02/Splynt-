@@ -32,6 +32,13 @@ public class ProductController {
         this.productService = productService;
     }
 
+    @org.springframework.web.bind.annotation.PatchMapping("/{productId}/settings")
+    @PreAuthorize("@storeAuthorizationService.canManage(authentication, #storeId)")
+    public ProductResponse updateSettings(@PathVariable Long storeId, @PathVariable Long productId,
+            @Valid @RequestBody com.aieyaan.splynt.product.dto.UpdateProductSettingsRequest request) {
+        return productService.updateSettings(storeId, productId, request);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ProductResponse createProduct(

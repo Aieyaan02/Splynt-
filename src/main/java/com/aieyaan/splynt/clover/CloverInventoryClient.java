@@ -39,13 +39,22 @@ public class CloverInventoryClient {
         );
     }
 
+    public JsonNode getOrdersModifiedSince(Long storeId, long milliseconds) {
+        return getAllPages(storeId, "/v3/merchants/{merchantId}/orders?filter=modifiedTime>=" + milliseconds);
+    }
+
+    public JsonNode getOrderLines(Long storeId, String orderId) {
+        if (!orderId.matches("[A-Za-z0-9_-]{1,64}")) throw new IllegalStateException("Invalid Clover order identifier");
+        return getAllPages(storeId, "/v3/merchants/{merchantId}/orders/" + orderId + "/line_items");
+    }
+
     private JsonNode getAllPages(Long storeId, String path) {
         var result = new tools.jackson.databind.json.JsonMapper().createObjectNode();
         var elements = result.putArray("elements");
         var seen = new java.util.HashSet<String>();
         final int pageSize = 100;
         for (int offset = 0; offset < 1_000_000; offset += pageSize) {
-            JsonNode response = executeGet(storeId, path + "?limit=" + pageSize + "&offset=" + offset);
+            JsonNode response = executeGet(storeId, path + (path.contains("?") ? "&" : "?") + "limit=" + pageSize + "&offset=" + offset);
             if (response == null || !response.path("elements").isArray())
                 throw new IllegalStateException("Clover returned an invalid inventory page");
             JsonNode page = response.path("elements");

@@ -71,6 +71,7 @@ class ProductControllerTest {
 
         ProductResponse response = new ProductResponse(
                 1L,
+                0L,
                 10L,
                 "123456789012",
                 "Orange Juice",

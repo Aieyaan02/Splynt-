@@ -12,6 +12,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 @Entity
+@org.hibernate.annotations.DynamicUpdate
 @Table(name = "clover_oauth_credentials")
 public class CloverOAuthCredential {
 
@@ -27,6 +28,19 @@ public class CloverOAuthCredential {
 
     @Column(name = "last_sync_error", length = 255)
     private String lastSyncError;
+
+    @Column(name = "sales_synced_at") private OffsetDateTime salesSyncedAt;
+    @Column(name = "sales_coverage_start") private OffsetDateTime salesCoverageStart;
+    @Column(name = "sales_sync_error", length = 255) private String salesSyncError;
+    public OffsetDateTime getSalesSyncedAt() { return salesSyncedAt; }
+    public OffsetDateTime getSalesCoverageStart() { return salesCoverageStart; }
+    public String getSalesSyncError() { return salesSyncError; }
+    public void markSalesSynchronized(OffsetDateTime at, OffsetDateTime coverage, int skipped) {
+        salesSyncedAt = at;
+        if (salesCoverageStart == null) salesCoverageStart = coverage;
+        salesSyncError = skipped == 0 ? null : skipped + " orders or lines excluded: unpaid, refunded, test, unmatched or unsupported data.";
+    }
+    public void markSalesFailed() { salesSyncError = "Sales history could not be refreshed. Check Clover order-read permission and reconnect if needed."; }
 
     public Long getStoreId() { return storeId; }
     public void assignStore(Long storeId) { this.storeId = java.util.Objects.requireNonNull(storeId); }

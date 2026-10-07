@@ -225,6 +225,8 @@ public class Product {
         quantity += amount;
     }
 
+    public long getVersion() { return version; }
+
     public Long getId() {
         return id;
     }

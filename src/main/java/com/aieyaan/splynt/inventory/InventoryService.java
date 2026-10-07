@@ -38,6 +38,8 @@ public class InventoryService {
                 productId
         );
 
+        if (product.getSource() == com.aieyaan.splynt.product.ProductSource.CLOVER)
+            throw new IllegalArgumentException("Manage Clover stock in Clover, then sync Splynt. This prevents changes being overwritten.");
         int quantityBefore = product.getQuantity();
 
         product.recordSale(request.quantity());
@@ -75,6 +77,8 @@ public class InventoryService {
                 productId
         );
 
+        if (product.getSource() == com.aieyaan.splynt.product.ProductSource.CLOVER)
+            throw new IllegalArgumentException("Manage Clover stock in Clover, then sync Splynt. This prevents changes being overwritten.");
         int quantityBefore = product.getQuantity();
 
         product.restock(request.quantity());
@@ -106,7 +110,9 @@ public class InventoryService {
             Long storeId,
             Long productId) {
 
-        findActiveProduct(storeId, productId);
+        // Archived products retain readable inventory history.
+        productRepository.findByStoreIdAndId(storeId, productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product was not found in this store"));
 
         return movementRepository
                 .findAllByProduct_Store_IdAndProduct_IdOrderByCreatedAtDesc(
