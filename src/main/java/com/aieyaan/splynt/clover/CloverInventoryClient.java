@@ -29,7 +29,7 @@ public class CloverInventoryClient {
 
     public JsonNode getItems(Long storeId) {
         return getAllPages(storeId,
-                "/v3/merchants/{merchantId}/items"
+                "/v3/merchants/{merchantId}/items?expand=categories"
         );
     }
 

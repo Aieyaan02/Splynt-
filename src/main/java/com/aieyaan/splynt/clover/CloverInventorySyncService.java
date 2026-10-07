@@ -72,7 +72,7 @@ public class CloverInventorySyncService {
         for (JsonNode itemNode : items) {
             received++;
 
-            if (itemNode.path("deleted").asBoolean(false)) {
+            if (itemNode.path("deleted").asBoolean(false) || itemNode.path("deletedTime").asLong(0) > 0) {
                 skipped++;
                 continue;
             }
@@ -80,7 +80,7 @@ public class CloverInventorySyncService {
             String cloverItemId = textValue(itemNode, "id");
             String name = textValue(itemNode, "name");
 
-            if (cloverItemId == null || name == null) {
+            if (cloverItemId == null || cloverItemId.length() > 64 || name == null || name.length() > 150) {
                 skipped++;
                 continue;
             }
@@ -90,6 +90,8 @@ public class CloverInventorySyncService {
             if (barcode == null) {
                 barcode = "CLOVER-" + cloverItemId;
             }
+
+            if (barcode.length() > 64) { skipped++; continue; }
 
             // An absent stock record is unknown, never evidence of zero stock.
             Integer quantity = quantities.get(cloverItemId);
@@ -104,12 +106,13 @@ public class CloverInventorySyncService {
                             cloverItemId
                     );
 
-            if (existingProduct.isEmpty()) {
-                existingProduct =
-                        productRepository.findByStoreIdAndBarcode(
-                                storeId,
-                                barcode
-                        );
+            // Barcode equality is not proof of identity. Never convert a manual product or
+            // relink another Clover item just because its barcode matches this item.
+            var barcodeOwner = productRepository.findByStoreIdAndBarcode(storeId, barcode);
+            if (barcodeOwner.isPresent() && (existingProduct.isEmpty()
+                    || !java.util.Objects.equals(barcodeOwner.get().getCloverItemId(), cloverItemId))) {
+                skipped++;
+                continue;
             }
 
             if (existingProduct.isPresent()) {
@@ -125,6 +128,7 @@ public class CloverInventorySyncService {
                         quantity
                 );
 
+                applyCatalogDetails(existingProduct.get(), itemNode);
                 updated++;
                 continue;
             }
@@ -143,6 +147,7 @@ public class CloverInventorySyncService {
             );
 
             product.setCloverItemId(cloverItemId);
+            applyCatalogDetails(product, itemNode);
             productRepository.save(product);
             if (quantity > 0) {
                 recordReconciliation(product, 0, quantity);
@@ -235,6 +240,30 @@ public class CloverInventorySyncService {
         movements.save(new InventoryMovement(product, InventoryMovementType.ADJUSTMENT,
                 after - before, before, after, InventoryMovementSource.CLOVER,
                 "Stock reconciled from Clover", product.getCloverItemId()));
+    }
+
+    private void applyCatalogDetails(Product product, JsonNode item) {
+        java.util.List<String> categories = new java.util.ArrayList<>();
+        JsonNode categoryNodes = item.path("categories").path("elements");
+        if (categoryNodes.isArray()) {
+            for (JsonNode category : categoryNodes) {
+                String name = textValue(category, "name");
+                if (name != null && name.length() <= 120 && !categories.contains(name)) categories.add(name);
+            }
+            categories.sort(String.CASE_INSENSITIVE_ORDER);
+            product.setCategory(categories.isEmpty() ? null : categories.getFirst());
+        }
+        product.setCloverDetails(new com.aieyaan.splynt.product.CloverCatalogDetails(
+                boundedText(item, "sku", 127), boundedText(item, "alternateName", 255),
+                boundedText(item, "unitName", 64), boundedText(item, "priceType", 32),
+                item.path("available").isBoolean() ? item.path("available").asBoolean() : null,
+                item.path("hidden").isBoolean() ? item.path("hidden").asBoolean() : null,
+                categoryNodes.isArray() ? java.util.List.copyOf(categories) : null));
+    }
+
+    private String boundedText(JsonNode item, String field, int max) {
+        String value = textValue(item, field);
+        return value != null && value.length() <= max ? value : null;
     }
 
     private String textValue(

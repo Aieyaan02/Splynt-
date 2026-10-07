@@ -114,12 +114,12 @@ export function Dashboard({
     const requestGeneration = useRef(0);
     const visibleProducts = products.filter(product => {
         const term = search.toLowerCase().trim();
-        return (!term || [product.name, product.barcode, product.brand, product.category]
+        return (!term || [product.name, product.barcode, product.brand, product.category, product.cloverDetails?.sku, product.cloverDetails?.alternateName, ...(product.cloverDetails?.categories ?? [])]
             .some(value => value?.toLowerCase().includes(term)))
             && (stockFilter === "all" || (stockFilter === "low" ? product.lowStock : product.quantity === 0))
-            && (!categoryFilter || product.category === categoryFilter);
+            && (!categoryFilter || product.category === categoryFilter || product.cloverDetails?.categories?.includes(categoryFilter));
     });
-    const categories = [...new Set(products.map(product => product.category).filter(Boolean))] as string[];
+    const categories = [...new Set(products.flatMap(product => [product.category, ...(product.cloverDetails?.categories ?? [])]).filter(Boolean))] as string[];
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");

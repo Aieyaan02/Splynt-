@@ -73,6 +73,69 @@ class CloverInventorySyncServiceTest {
         verifyNoInteractions(movements);
     }
 
+    @Test void importsProviderMetadataWithoutOverwritingLocalCostOrTargets() {
+        stock("10");
+        product.setUnitCost(new java.math.BigDecimal("2.25"));
+        when(client.getItems(1L)).thenReturn(json.readTree("""
+                {"elements":[{"id":"item1","name":"Water","code":"ABC","sku":"WATER-12",
+                "alternateName":"Spring water","unitName":"bottle","priceType":"FIXED","available":false,"hidden":true,
+                "cost":999,"categories":{"elements":[{"name":"Drinks"},{"name":"Beverages"},{"name":"Drinks"}]}}]}
+                """));
+        service.synchronize(1L);
+        assertEquals("WATER-12", product.getCloverDetails().sku());
+        assertEquals(java.util.List.of("Beverages", "Drinks"), product.getCloverDetails().categories());
+        assertEquals("Beverages", product.getCategory());
+        assertFalse(product.getCloverDetails().available());
+        assertTrue(product.getCloverDetails().hidden());
+        assertTrue(product.isActive());
+        assertEquals(new java.math.BigDecimal("2.25"), product.getUnitCost());
+        assertEquals(5, product.getReorderLevel());
+        assertEquals(20, product.getTargetStock());
+        verifyNoInteractions(movements);
+    }
+
+    @Test void matchingBarcodeCannotTakeOverManualInventory() {
+        stock("3");
+        product.setSource(ProductSource.MANUAL);
+        when(products.findByStoreIdAndCloverItemId(1L, "item1")).thenReturn(Optional.empty());
+        when(products.findByStoreIdAndBarcode(1L, "ABC")).thenReturn(Optional.of(product));
+        assertEquals(1, service.synchronize(1L).skipped());
+        assertEquals(ProductSource.MANUAL, product.getSource());
+        assertNull(product.getCloverItemId());
+        assertEquals(10, product.getQuantity());
+        verifyNoInteractions(movements);
+        verify(products, never()).save(any());
+    }
+
+    @Test void matchingBarcodeCannotRelinkAnotherCloverItem() {
+        stock("3");
+        product.setCloverItemId("otherItem");
+        when(products.findByStoreIdAndCloverItemId(1L, "item1")).thenReturn(Optional.empty());
+        when(products.findByStoreIdAndBarcode(1L, "ABC")).thenReturn(Optional.of(product));
+        assertEquals(1, service.synchronize(1L).skipped());
+        assertEquals("otherItem", product.getCloverItemId());
+        verifyNoInteractions(movements);
+    }
+
+    @Test void changedBarcodeConflictDoesNotCorruptKnownProduct() {
+        stock("3"); product.setCloverItemId("item1");
+        var other = new Product(store, "ABC", "Other", null, null, 20, 5, 30, null, ProductSource.CLOVER);
+        other.setCloverItemId("otherItem");
+        when(products.findByStoreIdAndBarcode(1L, "ABC")).thenReturn(Optional.of(other));
+        assertEquals(1, service.synchronize(1L).skipped());
+        assertEquals(10, product.getQuantity()); assertEquals(20, other.getQuantity());
+        verifyNoInteractions(movements);
+    }
+
+    @Test void deletedProviderItemIsNotImportedOrUnarchived() {
+        stock("3");
+        when(client.getItems(1L)).thenReturn(json.readTree("{\"elements\":[{\"id\":\"item1\",\"name\":\"Water\",\"code\":\"ABC\",\"deletedTime\":123456}]}"));
+        assertEquals(1, service.synchronize(1L).skipped());
+        assertEquals(10, product.getQuantity());
+        verifyNoInteractions(movements);
+        verify(products, never()).save(any());
+    }
+
     @Test void fractionalAndNegativeStockAreNotSilentlyCoerced() {
         for (String amount : new String[] {"1.5", "-3", "null", "2147483648"}) {
             stock(amount);

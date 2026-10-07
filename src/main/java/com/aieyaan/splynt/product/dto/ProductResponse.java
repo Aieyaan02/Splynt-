@@ -24,7 +24,8 @@ public record ProductResponse(
         boolean lowStock,
         int suggestedReorderQuantity,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt) {
+        OffsetDateTime updatedAt,
+        com.aieyaan.splynt.product.CloverCatalogDetails cloverDetails) {
 
     public static ProductResponse from(Product product) {
         return new ProductResponse(
@@ -45,7 +46,8 @@ public record ProductResponse(
                 product.isLowStock(),
                 product.calculateBaseReorderQuantity(),
                 product.getCreatedAt(),
-                product.getUpdatedAt()
+                product.getUpdatedAt(),
+                product.getCloverDetails()
         );
     }
 }

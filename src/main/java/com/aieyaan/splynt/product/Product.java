@@ -96,6 +96,17 @@ public class Product {
     )
     private String cloverItemId;
 
+    @Column(name = "clover_details_json", columnDefinition = "text")
+    private String cloverDetailsJson;
+
+    public CloverCatalogDetails getCloverDetails() {
+        return cloverDetailsJson == null ? null : new tools.jackson.databind.json.JsonMapper().readValue(cloverDetailsJson, CloverCatalogDetails.class);
+    }
+
+    public void setCloverDetails(CloverCatalogDetails details) {
+        cloverDetailsJson = details == null ? null : new tools.jackson.databind.json.JsonMapper().writeValueAsString(details);
+    }
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private ProductSource source = ProductSource.MANUAL;

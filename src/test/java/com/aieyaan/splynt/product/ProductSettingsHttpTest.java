@@ -18,6 +18,7 @@ import com.aieyaan.splynt.tenant.*;
 @SpringBootTest @Transactional
 class ProductSettingsHttpTest {
     @Autowired WebApplicationContext context;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     @Autowired ProductRepository products;
     @Autowired OrganizationRepository organizations;
     @Autowired StoreRepository stores;
@@ -40,6 +41,21 @@ class ProductSettingsHttpTest {
     String settings(long version, int reorder, int target) {
         return "{\"version\":" + version + ",\"name\":\"New coffee\",\"brand\":\"Brand\",\"category\":\"Pantry\",\"reorderLevel\":" + reorder + ",\"targetStock\":" + target + ",\"unitCost\":2.50}";
     }
+    @Test void cloverMetadataSurvivesPersistenceAndIsVisibleThroughTheProductApi() throws Exception {
+        product.setSource(ProductSource.CLOVER);
+        product.setCloverDetails(new CloverCatalogDetails("COFFEE-1", "Morning coffee", "cup", "FIXED", true, false,
+                java.util.List.of("Drinks", "Breakfast")));
+        products.saveAndFlush(product);
+        String endpoint = path();
+        String subject = owner.getId().toString();
+        entityManager.clear();
+        mvc.perform(get(endpoint).with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.cloverDetails.sku").value("COFFEE-1"))
+                .andExpect(jsonPath("$.cloverDetails.categories[1]").value("Breakfast"))
+                .andExpect(jsonPath("$.cloverDetails.available").value(true))
+                .andExpect(jsonPath("$.cloverDetails.hidden").value(false));
+    }
+
     @Test void updatesTargetsAndRecalculatesLowStockWithoutChangingQuantity() throws Exception {
         mvc.perform(patch(path() + "/settings").with(jwt().jwt(j -> j.subject(owner.getId().toString())))
                 .contentType("application/json").content(settings(product.getVersion(), 5, 20)))

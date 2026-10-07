@@ -106,6 +106,8 @@ export interface Product {
     targetStock: number;
     unitCost: number | null;
     cloverItemId: string | null;
+    cloverDetails: { sku: string | null; alternateName: string | null; unitName: string | null; priceType: string | null;
+        available: boolean | null; hidden: boolean | null; categories: string[] | null } | null;
     source: ProductSource;
     active: boolean;
     lowStock: boolean;

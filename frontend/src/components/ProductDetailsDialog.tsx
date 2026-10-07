@@ -43,6 +43,15 @@ export function ProductDetailsDialog({ product, storeId, canManage, timezone, on
     return <dialog ref={dialog} className="modal product-details" aria-labelledby="product-detail-title"
         onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
         <div className="modal-form"><header className="modal-header"><div><span className="section-kicker">{product.active ? "Product details" : "Archived product"}</span><h2 id="product-detail-title">{product.name}</h2><p>{product.barcode} · {product.quantity} units · {imported ? "Clover inventory" : "Manual inventory"}</p></div><button className="modal-close" aria-label="Close product details" disabled={busy} onClick={onClose}>×</button></header>
+            {imported && product.cloverDetails && <details className="insight-method"><summary>Clover catalog details</summary><dl className="catalog-details">
+                <div><dt>SKU</dt><dd>{product.cloverDetails.sku ?? "Not provided"}</dd></div>
+                <div><dt>Alternate name</dt><dd>{product.cloverDetails.alternateName ?? "Not provided"}</dd></div>
+                <div><dt>Categories</dt><dd>{product.cloverDetails.categories === null ? "Not provided" : product.cloverDetails.categories.join(", ") || "Uncategorized"}</dd></div>
+                <div><dt>Unit</dt><dd>{product.cloverDetails.unitName ?? "Not provided"}</dd></div>
+                <div><dt>Pricing</dt><dd>{product.cloverDetails.priceType === "PER_UNIT" ? "Per unit" : product.cloverDetails.priceType === "FIXED" ? "Fixed" : product.cloverDetails.priceType === "VARIABLE" ? "Variable" : "Not provided"}</dd></div>
+                <div><dt>Available in Clover</dt><dd>{product.cloverDetails.available === null ? "Not provided" : product.cloverDetails.available ? "Yes" : "No"}</dd></div>
+                <div><dt>Hidden in Clover</dt><dd>{product.cloverDetails.hidden === null ? "Not provided" : product.cloverDetails.hidden ? "Yes" : "No"}</dd></div>
+            </dl><p>These fields come from Clover. Hidden or unavailable does not mean the product is archived in Splynt.</p></details>}
             <div className="detail-tabs" role="tablist" aria-label="Product information">
                 {product.active && <button type="button" role="tab" aria-selected={tab === "settings"} onClick={() => setTab("settings")}>Stock settings</button>}
                 <button type="button" role="tab" aria-selected={tab === "history"} onClick={() => setTab("history")}>Inventory history <span>{history.length}</span></button>
