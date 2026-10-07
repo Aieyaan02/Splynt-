@@ -168,3 +168,8 @@ Next work: editable product settings/stock targets, visible inventory history, a
 - New history payloads identify metric ORDERS and expose ordersPerDay/dailyOrdersChangePercent. Saved older AI snapshots remain readable with an explicit legacy summed-unit warning; their evidence is not rewritten. Product unit labels currently reflect catalog metadata, so changes to a product's measurement basis over time still require care when interpreting product-specific history.
 - Verification: clean backend suite passed 177 cases; final historical/HTTP tests passed with the new mixed-quantity and repeated-order regression (178 report cases). Existing leap-year, annual-growth, sparse-data and single-year-spike checks now exercise order rates. Frontend build/lint and whitespace checks passed. Hosted CI for f72f92d passed.
 - Live merchant/model quality, browser verification, remaining review and release acceptance are still outstanding. Goal active; production/main unchanged.
+
+## Draft review preparation — 2026-10-07
+- Reviewed branch scope against the original user requirements and prepared docs/REVIEW_HANDOFF.md with a reusable draft PR description, evidence matrix and explicit remaining acceptance work.
+- No existing open PR from dev/splynt-platform was found. Connected GitHub create_pull_request returned HTTP 403 Resource not accessible by integration; no PR exists from this attempt and nothing was merged. PR publishing requires the integration's write permission. Continue independent implementation/review; this alone is not a global blocker.
+- Current head's hosted CI was in progress when inspected; no new test run is needed for this documentation-only checkpoint. Goal remains active; production/main unchanged.
