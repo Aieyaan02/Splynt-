@@ -93,4 +93,22 @@ class AdviceHttpTest {
         verify(client, never()).generate(anyMap());
         assertTrue(reports.findById(store.getId()).isEmpty());
     }
+    @Test void failedRefreshKeepsPreviousReportAndEvidence() throws Exception {
+        mvc.perform(post(path()).with(jwt().jwt(j -> j.subject(owner.getId().toString())))).andExpect(status().isOk());
+        var saved = reports.findById(store.getId()).orElseThrow();
+        String oldReport = saved.reportJson;
+        String oldEvidence = saved.evidenceJson;
+        OffsetDateTime generatedAt = saved.generatedAt;
+        saved.attemptedAt = OffsetDateTime.now().minusHours(2);
+        reports.saveAndFlush(saved);
+        when(client.generate(anyMap())).thenThrow(new IllegalStateException("Private failure"));
+        mvc.perform(post(path()).with(jwt().jwt(j -> j.subject(owner.getId().toString()))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.report.summary").value("Coffee is a leading seller."))
+                .andExpect(jsonPath("$.error").isNotEmpty()).andExpect(jsonPath("$.canGenerate").value(false));
+        var after = reports.findById(store.getId()).orElseThrow();
+        assertEquals(oldReport, after.reportJson); assertEquals(oldEvidence, after.evidenceJson);
+        assertEquals(generatedAt, after.generatedAt);
+        verify(client, times(2)).generate(anyMap());
+    }
+
 }

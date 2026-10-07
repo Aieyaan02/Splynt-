@@ -20,6 +20,6 @@ Requests use a five-second connection and 45-second read timeout with no applica
 
 ## Verification and release gate
 
-Tests use a local HTTP provider simulator for request shape, storage flag, refusals, incomplete/malformed output and invalid citations. Database-backed HTTP tests cover authorization, snapshots, cooldown, sanitized failures and stale/insufficient-data handling. They do not establish real-model output quality or account/model availability.
+Tests use a local HTTP provider simulator for request shape, storage flag, refusals, incomplete/malformed output and invalid citations. Database-backed HTTP tests cover authorization, snapshots, cooldown, sanitized failures and stale/insufficient-data handling. Separate-thread database tests cover concurrent first-report requests for both success and provider failure, verify one provider call and persisted cooldown, and run on PostgreSQL in CI. Failed-refresh tests preserve the prior report and evidence. These tests do not establish real-model output quality or account/model availability.
 
 Before release, configure staging credentials, test reports on representative consenting merchant data, review ideas and numeric claims against their snapshots, test adversarial product names, and verify UI behavior. Real OpenAI requests have not been made in this development checkpoint. Comparative calendar-month analytics are implemented; external local-market evidence and real-provider quality verification remain unfinished.
