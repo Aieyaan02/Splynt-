@@ -66,7 +66,31 @@ public class CloverInventoryClient {
     }
 
     public JsonNode getOrdersModifiedSince(Long storeId, long milliseconds) {
-        return getAllPages(storeId, "/v3/merchants/{merchantId}/orders?filter=modifiedTime>=" + milliseconds);
+        return getOrdersModifiedBetween(storeId, milliseconds, System.currentTimeMillis());
+    }
+
+    public JsonNode getOrdersModifiedBetween(Long storeId, long fromInclusive, long untilExclusive) {
+        if (fromInclusive < 0 || untilExclusive < fromInclusive)
+            throw new IllegalArgumentException("Invalid sales import time range");
+        final long window = java.time.Duration.ofDays(30).toMillis();
+        var byId = new java.util.LinkedHashMap<String, JsonNode>();
+        for (long start = fromInclusive; start < untilExclusive;) {
+            long end = start + Math.min(window, untilExclusive - start);
+            JsonNode page = getAllPages(storeId, "/v3/merchants/{merchantId}/orders?filter=modifiedTime>="
+                    + start + "&filter=modifiedTime<" + end);
+            for (JsonNode order : page.path("elements")) {
+                String id = order.path("id").asText("");
+                if (!id.matches("[A-Za-z0-9_-]{1,64}")) throw new IllegalStateException("Invalid Clover order identifier");
+                // A changed order may move into a later window during the read; retain its latest snapshot.
+                byId.put(id, order);
+                if (byId.size() > 1_000_000) throw new IllegalStateException("Clover sales exceeded the supported import size");
+            }
+            start = end;
+        }
+        var result = new tools.jackson.databind.json.JsonMapper().createObjectNode();
+        var elements = result.putArray("elements");
+        byId.values().forEach(elements::add);
+        return result;
     }
 
     public JsonNode getOrderLines(Long storeId, String orderId) {

@@ -71,8 +71,8 @@ class CloverInventoryClientTest {
             exchange.sendResponseHeaders(200, bytes.length);
             exchange.getResponseBody().write(bytes); exchange.close();
         });
-        assertEquals(0, client.getOrdersModifiedSince(7L, 123456789L).path("elements").size());
-        assertEquals("filter=modifiedTime>=123456789&limit=100&offset=0", requests.getFirst());
+        assertEquals(0, client.getOrdersModifiedBetween(7L, 123456789L, 123456999L).path("elements").size());
+        assertEquals("filter=modifiedTime>=123456789&filter=modifiedTime<123456999&limit=100&offset=0", requests.getFirst());
     }
     @Test void refreshesOnlyRequestedStoresTokenOnUnauthorized() {
         rejectFirstToken = true;
@@ -150,6 +150,37 @@ class CloverInventoryClientTest {
         });
         assertEquals("CAD", client.getMerchantProperties(7L).path("defaultCurrency").asText());
         verify(tokens).getMerchantId(7L);
+    }
+
+    @Test void longSalesWindowsAreBoundedAndOrdersMovingBetweenWindowsAreDeduplicated() {
+        long start = 1_700_000_000_000L;
+        long day = java.time.Duration.ofDays(1).toMillis();
+        server.createContext("/v3/merchants/merchant-seven/orders", exchange -> {
+            String query = exchange.getRequestURI().getQuery(); requests.add(query);
+            String body = "{\"elements\":[{\"id\":\"moving-order\",\"revision\":" + requests.size() + "}]}";
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length); exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        var result = client.getOrdersModifiedBetween(7L, start, start + 95 * day).path("elements");
+        assertEquals(4, requests.size()); assertEquals(1, result.size());
+        assertEquals(4, result.get(0).path("revision").asInt());
+        for (int i = 0; i < 4; i++) {
+            long lower = start + i * 30 * day;
+            long upper = Math.min(start + 95 * day, lower + 30 * day);
+            assertEquals("filter=modifiedTime>=" + lower + "&filter=modifiedTime<" + upper + "&limit=100&offset=0", requests.get(i));
+        }
+    }
+    @Test void laterSalesWindowFailureNeverReturnsPartialHistory() {
+        server.createContext("/v3/merchants/merchant-seven/orders", exchange -> {
+            requests.add(exchange.getRequestURI().getQuery());
+            byte[] bytes = "{\"elements\":[{\"id\":\"order-one\"}]}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(requests.size() == 2 ? 503 : 200, bytes.length);
+            exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        assertThrows(IllegalStateException.class, () -> client.getOrdersModifiedBetween(7L, 1_700_000_000_000L,
+                1_700_000_000_000L + java.time.Duration.ofDays(95).toMillis()));
     }
 
 }

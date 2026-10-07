@@ -241,3 +241,7 @@ Added request/reset/verification pages, sign-in recovery link and unverified-acc
 ### Recovery record retention
 
 Added hourly maintenance independent of SMTP: cancel pending email jobs older than one hour, remove jobs older than seven days, delete expired action tokens and hour-old request-ledger records. Recent jobs and valid tokens remain usable. Scheduling is disabled in isolated tests, which call maintenance explicitly. Existing backend suite passes; PostgreSQL maintenance and recovery HTTP checks exercise actual cleanup and preserved functionality. Live email/browser acceptance remains outstanding.
+
+### Clover historical-window correctness
+
+Reviewing seasonal readiness exposed a documented provider restriction: time-filtered order queries span at most 90 days. Replaced the single lower-bound request with paginated, half-open 30-day windows and a bounded aggregate. Later snapshots of orders moving between windows replace earlier copies; any failed window prevents a partial result. Clean backend suite passes, with simulator tests for 95-day traversal, exact bounds, cross-window deduplication and later-window failure. Hosted checks for preceding commit ea48493 passed. Older-history backfill controls and real-provider parity remain outstanding.

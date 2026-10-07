@@ -106,3 +106,9 @@ For existing connections V16 schedules one re-read from the stored coverage star
 V17 stores each sales line's measurement unit separately from the current catalog. Existing rows start unknown; connected stores re-read the stored coverage window to recover provider units where available. Weighted lines without a unit stay unknown. Splynt does not guess past units from today's product settings or convert ounces/pounds automatically.
 
 Current and yearly product quantity totals/rates are withheld when a comparison mixes units or includes unknown units. Stock-cover estimates additionally require the historical unit to match current inventory metadata. Distinct-order rankings/timing/monthly patterns remain available. These guards prevent a catalog measurement change from silently rewriting the meaning of old sales. Missing provider history can remain unknown after re-import.
+
+### Bounded order time windows
+
+Order reads now split the requested modified-time range into consecutive half-open windows of at most 30 days, each independently paginated. Clover documents a maximum 90-day span for time-filtered requests and may narrow larger requests to the latest 90 days; a single unbounded retry request is therefore not sufficient. Both lower and upper bounds are sent. If an order moves into a later modified-time window during the read, the later snapshot replaces its earlier entry. Any failed window aborts the whole response so the sales transaction cannot publish partial coverage. The total import remains capped at one million distinct orders.
+
+This fixes long retry-window retrieval; it does not yet add an older-history backfill control. New connections still start with 90 days, so recurring seasonal comparisons require sufficient accumulated history. Real merchant parity remains unverified. Reference: [Clover date filters and 90-day restriction](https://docs.clover.com/dev/docs/applying-filters).
