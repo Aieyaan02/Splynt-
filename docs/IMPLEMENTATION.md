@@ -221,3 +221,7 @@ Added a current-password-protected account endpoint and workspace dialog. V18 ad
 ### Password-change concurrency acceptance
 
 PostgreSQL HTTP tests now start two real signed-token password-change requests together. Exactly one succeeds; the other is denied, and the credential version increments once. A separate stale-entity test proves a delayed login/account update cannot write the old password back after a successful change. All six password-change HTTP cases pass on PostgreSQL with Flyway and schema validation. These checks verify concurrency behavior, not browser UX or forgotten-password delivery.
+
+### Recovery/verification token lifecycle foundation
+
+Added V19 and internal account-action issuance/redemption with 256-bit random tokens, hashed persistence, purpose/email/credential binding, expiry and single use. User-first locking and token re-query serialize competing redemptions; replacement invalidates earlier links. Invalid passwords leave tokens usable. Email changes increment the credential version, including protection against changing an email away and back. Six lifecycle tests cover these behaviors, including concurrent redemption. This is partial implementation: delivery, abuse controls, public API and recovery/verification screens remain to be built before the feature is usable.

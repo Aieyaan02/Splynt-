@@ -80,7 +80,9 @@ public class AppUser {
     }
 
     public void changeEmail(String email) {
-        this.email = normalizeEmail(email);
+        String normalized = normalizeEmail(email);
+        if (!normalized.equals(this.email)) credentialVersion++;
+        this.email = normalized;
         this.emailVerified = false;
     }
 

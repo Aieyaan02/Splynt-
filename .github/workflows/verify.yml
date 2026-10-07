@@ -54,7 +54,7 @@ jobs:
       - name: Verify migrations, schema and database-backed workflows
         run: >-
           ./mvnw --batch-mode --no-transfer-progress clean test
-          -Dtest=PasswordChangeHttpTest,InventoryIdempotencyTest,StoreSettingsHttpTest,ProductSettingsHttpTest,DecimalInventoryHttpTest,CloverImportReviewHttpTest,AdviceHttpTest,AdviceConcurrencyTest,CloverSalesSyncServiceTest,StoreOnboardingAcceptanceTest
+          -Dtest=AccountActionServiceTest,PasswordChangeHttpTest,InventoryIdempotencyTest,StoreSettingsHttpTest,ProductSettingsHttpTest,DecimalInventoryHttpTest,CloverImportReviewHttpTest,AdviceHttpTest,AdviceConcurrencyTest,CloverSalesSyncServiceTest,StoreOnboardingAcceptanceTest
           -Dspring.datasource.url=jdbc:postgresql://localhost:5432/splynt_test
           -Dspring.datasource.username=splynt_test
           -Dspring.datasource.password=ci-only-password
