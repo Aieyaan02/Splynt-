@@ -187,4 +187,45 @@ class CloverInventorySyncServiceTest {
         assertTrue(result.issues().isEmpty());
     }
 
+    @Test void absentCatalogItemLosesCurrentBalanceButKeepsHistoryAndRecovers() {
+        product.setCloverItemId("item1");
+        when(products.findAllByStoreIdAndActiveTrueOrderByNameAsc(1L)).thenReturn(java.util.List.of(product));
+        when(client.getItems(1L)).thenReturn(json.readTree("{\"elements\":[]}"));
+        stock("3");
+        var result = service.synchronize(1L);
+        assertFalse(product.isStockKnown()); assertTrue(product.isActive());
+        assertEquals(10, product.getQuantity().intValueExact());
+        assertEquals("MISSING_CATALOG_ITEM", result.issues().getFirst().reason());
+        verifyNoInteractions(movements);
+        when(client.getItems(1L)).thenReturn(json.readTree("{\"elements\":[{\"id\":\"item1\",\"name\":\"Water\",\"code\":\"ABC\"}]}"));
+        assertEquals(0, service.synchronize(1L).issueCount());
+        assertTrue(product.isStockKnown()); assertEquals(3, product.getQuantity().intValueExact());
+    }
+
+    @Test void deletedCatalogItemBecomesUnknownWithoutInventingSale() {
+        product.setCloverItemId("item1");
+        when(products.findAllByStoreIdAndActiveTrueOrderByNameAsc(1L)).thenReturn(java.util.List.of(product));
+        when(client.getItems(1L)).thenReturn(json.readTree("{\"elements\":[{\"id\":\"item1\",\"deleted\":true}]}"));
+        stock("0");
+        assertEquals(1, service.synchronize(1L).issueCount());
+        assertFalse(product.isStockKnown()); assertTrue(product.isActive());
+        verifyNoInteractions(movements);
+    }
+
+    @Test void failedCatalogFetchDoesNotInvalidateExistingBalances() {
+        when(client.getItems(1L)).thenThrow(new IllegalStateException("Page failed"));
+        assertThrows(IllegalStateException.class, () -> service.synchronize(1L));
+        assertTrue(product.isStockKnown());
+        verifyNoInteractions(products, movements);
+    }
+
+    @Test void absentManualInventoryIsUnaffected() {
+        product.setSource(ProductSource.MANUAL);
+        when(products.findAllByStoreIdAndActiveTrueOrderByNameAsc(1L)).thenReturn(java.util.List.of(product));
+        when(client.getItems(1L)).thenReturn(json.readTree("{\"elements\":[]}"));
+        stock("0");
+        assertEquals(0, service.synchronize(1L).issueCount());
+        assertTrue(product.isStockKnown()); verify(products, never()).save(any());
+    }
+
 }

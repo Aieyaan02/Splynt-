@@ -62,6 +62,7 @@ public class CloverInventorySyncService {
         int updated = 0;
         int skipped = 0;
         var review = new ImportReview();
+        var presentItemIds = new java.util.HashSet<String>();
 
         JsonNode items = itemsResponse.path("elements");
 
@@ -81,6 +82,7 @@ public class CloverInventorySyncService {
 
             String cloverItemId = textValue(itemNode, "id");
             String name = textValue(itemNode, "name");
+            if (cloverItemId != null) presentItemIds.add(cloverItemId);
 
             if (cloverItemId == null || cloverItemId.length() > 64 || name == null || name.length() > 150) {
                 skipped++;
@@ -157,6 +159,16 @@ public class CloverInventorySyncService {
             created++;
         }
 
+        // Only reconcile absence after both complete provider collections were fetched.
+        // Keep identity/history and local archive choices; absence is not a zero balance or a sale.
+        for (Product existing : productRepository.findAllByStoreIdAndActiveTrueOrderByNameAsc(storeId)) {
+            if (existing.getSource() != ProductSource.CLOVER || existing.getCloverItemId() == null
+                    || presentItemIds.contains(existing.getCloverItemId())) continue;
+            existing.markStockUnknown();
+            productRepository.save(existing);
+            review.addMissing(existing);
+        }
+
         return new CloverSyncResponse(
                 cloverClient.getMerchantId(storeId),
                 received,
@@ -170,6 +182,12 @@ public class CloverInventorySyncService {
     private static class ImportReview {
         int count;
         final java.util.List<com.aieyaan.splynt.clover.dto.CloverImportIssue> issues = new java.util.ArrayList<>();
+        void addMissing(Product product) {
+            count++;
+            if (issues.size() < 100) issues.add(new com.aieyaan.splynt.clover.dto.CloverImportIssue(
+                    product.getCloverItemId(), product.getName(), product.getBarcode(), "MISSING_CATALOG_ITEM",
+                    "This product was deleted or was not returned in the completed Clover catalog import. Confirm it in Clover, then sync again, or archive it in Splynt. Its stock stays unknown until Clover returns it."));
+        }
         void unknownStock(JsonNode item) {
             add(item, "UNKNOWN_STOCK", "Check stock tracking and the balance in Clover, then sync again. Splynt supports up to six decimal places and balances below one trillion in magnitude; missing or unsupported stock stays unknown.");
         }
