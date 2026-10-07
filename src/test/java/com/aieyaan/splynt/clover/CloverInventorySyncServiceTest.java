@@ -228,4 +228,45 @@ class CloverInventorySyncServiceTest {
         assertTrue(product.isStockKnown()); verify(products, never()).save(any());
     }
 
+    @Test void importsExactProviderMoneyWithoutRelabelingLocalCosts() {
+        stock("10"); product.setUnitCost(new java.math.BigDecimal("2.25"));
+        when(client.getMerchantProperties(1L)).thenReturn(json.readTree("{\"defaultCurrency\":\"CAD\"}"));
+        when(client.getItems(1L)).thenReturn(json.readTree("{\"elements\":[{\"id\":\"item1\",\"name\":\"Water\",\"priceType\":\"FIXED\",\"price\":1299,\"cost\":501}]}"));
+        service.synchronize(1L);
+        var money = product.getCloverDetails().money();
+        assertEquals("CAD", money.currency()); assertEquals("12.99", money.price()); assertEquals("5.01", money.cost());
+        assertFalse(money.matchesStoreCurrency());
+        assertEquals(new java.math.BigDecimal("2.25"), product.getUnitCost());
+    }
+
+    @Test void unavailableCurrencyDoesNotBlockInventoryOrReuseOldMoney() {
+        stock("3");
+        when(client.getMerchantProperties(1L)).thenThrow(new IllegalStateException("Provider unavailable"));
+        service.synchronize(1L);
+        assertEquals(3, product.getQuantity().intValueExact());
+        assertNull(product.getCloverDetails().money().currency());
+        assertNull(product.getCloverDetails().money().price());
+    }
+
+    @Test void variableAndUnsupportedMoneyNeverBecomeFixedPrices() {
+        stock("10");
+        when(client.getMerchantProperties(1L)).thenReturn(json.readTree("{\"defaultCurrency\":\"USD\"}"));
+        when(client.getItems(1L)).thenReturn(json.readTree("{\"elements\":[{\"id\":\"item1\",\"name\":\"Water\",\"priceType\":\"VARIABLE\",\"price\":0,\"cost\":-1}]}"));
+        service.synchronize(1L);
+        assertNull(product.getCloverDetails().money().price()); assertNull(product.getCloverDetails().money().cost());
+        assertTrue(product.getCloverDetails().money().matchesStoreCurrency());
+        when(client.getItems(1L)).thenReturn(json.readTree("{\"elements\":[{\"id\":\"item1\",\"name\":\"Water\",\"priceType\":\"FIXED\",\"price\":1.5,\"cost\":100000000000000}]}"));
+        service.synchronize(1L);
+        assertNull(product.getCloverDetails().money().price()); assertNull(product.getCloverDetails().money().cost());
+    }
+
+    @Test void invalidOrNonCentCurrenciesStayUnknown() {
+        stock("10");
+        for (String currency : new String[]{"invalid", "JPY", "XXX", ""}) {
+            when(client.getMerchantProperties(1L)).thenReturn(json.readTree("{\"defaultCurrency\":\"" + currency + "\"}"));
+            service.synchronize(1L);
+            assertNull(product.getCloverDetails().money().currency());
+        }
+    }
+
 }

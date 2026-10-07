@@ -140,4 +140,16 @@ class CloverInventoryClientTest {
         });
     }
 
+    @Test void merchantPropertiesUseTheSelectedStoreMerchant() {
+        server.createContext("/v3/merchants/merchant-seven/properties", exchange -> {
+            assertEquals("Bearer initial-token", exchange.getRequestHeaders().getFirst("Authorization"));
+            byte[] bytes = "{\"defaultCurrency\":\"CAD\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes); exchange.close();
+        });
+        assertEquals("CAD", client.getMerchantProperties(7L).path("defaultCurrency").asText());
+        verify(tokens).getMerchantId(7L);
+    }
+
 }

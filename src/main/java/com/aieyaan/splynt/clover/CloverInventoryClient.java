@@ -55,6 +55,10 @@ public class CloverInventoryClient {
         return catalog;
     }
 
+    public JsonNode getMerchantProperties(Long storeId) {
+        return executeGet(storeId, "/v3/merchants/{merchantId}/properties");
+    }
+
     public JsonNode getItemStocks(Long storeId) {
         return getAllPages(storeId,
                 "/v3/merchants/{merchantId}/item_stocks"

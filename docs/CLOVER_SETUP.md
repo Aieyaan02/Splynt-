@@ -61,7 +61,7 @@ The importer initially fetches up to 90 days, then accumulates history. The comp
 
 ### Imported catalog details and identity conflicts
 
-Splynt imports paginated category memberships and stores SKU, alternate name, unit name, pricing type, availability, visibility and the returned category names. Product details show these fields; search includes SKU, alternate names and categories, and the category filter includes all returned category names. The alphabetically first returned category is used in the existing single-category table column. Missing optional values are shown as not provided. Availability/visibility do not archive or delete a Splynt product. This is catalog metadata, not a complete import of Clover taxes, modifiers, variants or monetary fields.
+Splynt imports paginated category memberships and stores SKU, alternate name, unit name, pricing type, availability, visibility and the returned category names. Product details show these fields; search includes SKU, alternate names and categories, and the category filter includes all returned category names. The alphabetically first returned category is used in the existing single-category table column. Missing optional values are shown as not provided. Availability/visibility do not archive or delete a Splynt product. This is catalog metadata, not a complete import of Clover taxes, modifiers, variants or every monetary/tax field.
 
 Clover item ID is the imported product identity. A matching barcode alone will no longer convert a manual product or relink a different Clover item. Conflicts are skipped and included in the connection review list; no involved stock is overwritten. Open the import details to see the affected Clover item, barcode, reason and next step. Splynt does not merge records automatically. Deleted items and overlong required identifiers/names are also skipped. Local reorder targets and costs remain under the retailer's control.
 
@@ -84,3 +84,13 @@ The Clover connection panel exposes the last completed import's actionable issue
 A successful import replaces the review list, so resolved issues disappear. A failed refresh keeps the previous list and timestamp, with a separate refresh error. An older completed result cannot overwrite a newer review snapshot. Details use the existing store-member authorization and never include tokens or provider response bodies. V15 persists the issue snapshot and count. The legacy `skipped` field still counts records not fully imported; the new `issueCount` counts actionable review items only.
 
 After a completed catalog and stock fetch, previously imported active Clover products that are absent or explicitly deleted are marked unknown and listed for review. Splynt preserves their last recorded balance, audit history, and local settings; it does not infer a sale or automatically archive them. Reappearance restores normal reconciliation. Failed fetches do not apply absence detection. Manual and locally archived products are unaffected.
+
+## Imported prices and costs
+
+Clover catalog details include the provider selling price and item cost in a verified merchant currency. Splynt reads only `defaultCurrency` from the merchant-properties response for this purpose; it does not persist the full properties payload. Clover documents inventory amounts in cents. Two-decimal ISO currencies are supported; absent/invalid/non-two-decimal currency leaves monetary values unavailable without blocking stock import. Each sync replaces these fields, so an unavailable currency cannot silently retain an old converted value.
+
+Prices are displayed for FIXED/PER_UNIT pricing; VARIABLE prices are set at sale. Missing, fractional-cent, negative and oversized provider monetary amounts are unavailable rather than rounded. Values are stored as exact decimal strings in existing catalog JSON. Clover tax settings determine whether selling prices include tax; Splynt does not calculate tax here.
+
+A mismatch with Splynt's store currency is shown in product details. There is no conversion or automatic relabeling of local costs. Imported cost is reference metadata; inventory valuation continues using the independently entered Splynt unit cost. Verify both currencies before using imported costs for purchasing decisions. Live merchant currency/price acceptance remains required.
+
+References: [Clover inventory money format](https://docs.clover.com/dev/docs/managing-items-item-groups), [merchant properties](https://docs.clover.com/dev/reference/merchantgetmerchantproperties).

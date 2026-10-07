@@ -44,7 +44,7 @@ class ProductSettingsHttpTest {
     @Test void cloverMetadataSurvivesPersistenceAndIsVisibleThroughTheProductApi() throws Exception {
         product.setSource(ProductSource.CLOVER);
         product.setCloverDetails(new CloverCatalogDetails("COFFEE-1", "Morning coffee", "cup", "FIXED", true, false,
-                java.util.List.of("Drinks", "Breakfast")));
+                java.util.List.of("Drinks", "Breakfast"), new CloverCatalogDetails.CloverMoney("CAD", "12.99", "5.01", false)));
         products.saveAndFlush(product);
         String endpoint = path();
         String subject = owner.getId().toString();
@@ -53,7 +53,10 @@ class ProductSettingsHttpTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.cloverDetails.sku").value("COFFEE-1"))
                 .andExpect(jsonPath("$.cloverDetails.categories[1]").value("Breakfast"))
                 .andExpect(jsonPath("$.cloverDetails.available").value(true))
-                .andExpect(jsonPath("$.cloverDetails.hidden").value(false));
+                .andExpect(jsonPath("$.cloverDetails.hidden").value(false))
+                .andExpect(jsonPath("$.cloverDetails.money.currency").value("CAD"))
+                .andExpect(jsonPath("$.cloverDetails.money.price").value("12.99"))
+                .andExpect(jsonPath("$.cloverDetails.money.matchesStoreCurrency").value(false));
     }
 
     @Test void updatesTargetsAndRecalculatesLowStockWithoutChangingQuantity() throws Exception {

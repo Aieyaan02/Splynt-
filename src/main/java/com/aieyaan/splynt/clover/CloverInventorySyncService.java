@@ -57,6 +57,19 @@ public class CloverInventorySyncService {
         Map<String, BigDecimal> quantities =
                 extractStockQuantities(stocksResponse);
 
+        String providerCurrency = null;
+        try {
+            JsonNode properties = cloverClient.getMerchantProperties(storeId);
+            if (properties != null) {
+                String code = properties.path("defaultCurrency").asText("").trim().toUpperCase(java.util.Locale.ROOT);
+                // Clover documents inventory money in cents; only render supported two-decimal currencies.
+                if (code.matches("[A-Z]{3}") && java.util.Currency.getInstance(code).getDefaultFractionDigits() == 2)
+                    providerCurrency = code;
+            }
+        } catch (IllegalArgumentException | IllegalStateException | org.springframework.web.client.RestClientException unavailable) {
+            // Optional monetary metadata must not prevent stock reconciliation. Never guess the currency.
+        }
+
         int received = 0;
         int created = 0;
         int updated = 0;
@@ -130,7 +143,7 @@ public class CloverInventorySyncService {
                         quantity
                 );
 
-                applyCatalogDetails(existingProduct.get(), itemNode);
+                applyCatalogDetails(existingProduct.get(), itemNode, providerCurrency, store.getCurrencyCode());
                 updated++;
                 continue;
             }
@@ -151,7 +164,7 @@ public class CloverInventorySyncService {
 
             if (quantity == null) product.markStockUnknown();
             product.setCloverItemId(cloverItemId);
-            applyCatalogDetails(product, itemNode);
+            applyCatalogDetails(product, itemNode, providerCurrency, store.getCurrencyCode());
             productRepository.save(product);
             if (quantity != null && quantity.signum() != 0) {
                 recordReconciliation(product, BigDecimal.ZERO, quantity, true);
@@ -271,7 +284,7 @@ public class CloverInventorySyncService {
                 product.getCloverItemId()));
     }
 
-    private void applyCatalogDetails(Product product, JsonNode item) {
+    private void applyCatalogDetails(Product product, JsonNode item, String currency, String storeCurrency) {
         java.util.List<String> categories = new java.util.ArrayList<>();
         JsonNode categoryNodes = item.path("categories").path("elements");
         if (categoryNodes.isArray()) {
@@ -287,7 +300,18 @@ public class CloverInventorySyncService {
                 boundedText(item, "unitName", 64), boundedText(item, "priceType", 32),
                 item.path("available").isBoolean() ? item.path("available").asBoolean() : null,
                 item.path("hidden").isBoolean() ? item.path("hidden").asBoolean() : null,
-                categoryNodes.isArray() ? java.util.List.copyOf(categories) : null));
+                categoryNodes.isArray() ? java.util.List.copyOf(categories) : null,
+                new com.aieyaan.splynt.product.CloverCatalogDetails.CloverMoney(currency,
+                        currency == null || !("FIXED".equals(textValue(item, "priceType")) || "PER_UNIT".equals(textValue(item, "priceType"))) ? null : moneyAmount(item.get("price")),
+                        currency == null ? null : moneyAmount(item.get("cost")),
+                        currency == null ? null : currency.equals(storeCurrency))));
+    }
+
+    private String moneyAmount(JsonNode value) {
+        if (value == null || !value.isIntegralNumber()) return null;
+        BigDecimal cents = value.decimalValue();
+        if (cents.signum() < 0 || cents.compareTo(new BigDecimal("100000000000000")) >= 0) return null;
+        return cents.movePointLeft(2).setScale(2).toPlainString();
     }
 
     private String boundedText(JsonNode item, String field, int max) {
