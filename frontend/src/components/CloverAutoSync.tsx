@@ -78,6 +78,11 @@ export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAut
             {connection?.connected && <button type="button" className="button secondary compact" disabled={busy} onClick={() => void synchronize()}>Sync now</button>}
         </div>}
         {!canManage && connection && !connection.connected && <small>Ask your store owner or admin to connect Clover.</small>}
+        {connection && connection.issueCount > 0 && <details className="import-review"><summary>Review {connection.issueCount} inventory {connection.issueCount === 1 ? "item" : "items"}</summary>
+            <p>From the last completed import{connection.lastSyncedAt ? ` on ${new Date(connection.lastSyncedAt).toLocaleString()}` : ""}. A failed refresh does not clear this list.</p>
+            {connection.issueCount > connection.issues.length && <p>Showing the first {connection.issues.length} items. Resolve these and sync again to see remaining issues.</p>}
+            <ul>{connection.issues.map((issue, index) => <li key={`${issue.itemId}-${index}`}><strong>{issue.name ?? "Unnamed Clover item"}</strong><span>{issue.reason === "BARCODE_CONFLICT" ? "Barcode conflict" : issue.reason === "UNKNOWN_STOCK" ? "Unknown stock" : issue.reason === "INVALID_BARCODE" ? "Unsupported barcode" : "Incomplete item details"}</span><small>{issue.barcode ? `Barcode: ${issue.barcode} · ` : ""}{issue.itemId ? `Clover item: ${issue.itemId}` : "No item identifier supplied"}</small><p>{issue.nextStep}</p></li>)}</ul>
+        </details>}
         {(error || connection?.lastSyncError) && <p role="alert" className="message error-message">{error || connection?.lastSyncError}</p>}
     </div>;
 }

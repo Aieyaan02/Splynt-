@@ -248,6 +248,8 @@ export interface CloverConnection {
     merchantId: string | null;
     lastSyncedAt: string | null;
     lastSyncError: string | null;
+    issueCount: number;
+    issues: { itemId: string | null; name: string | null; barcode: string | null; reason: string; nextStep: string }[];
 }
 
 export const cloverApi = {

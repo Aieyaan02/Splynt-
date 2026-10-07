@@ -61,6 +61,7 @@ public class CloverInventorySyncService {
         int created = 0;
         int updated = 0;
         int skipped = 0;
+        var review = new ImportReview();
 
         JsonNode items = itemsResponse.path("elements");
 
@@ -83,6 +84,7 @@ public class CloverInventorySyncService {
 
             if (cloverItemId == null || cloverItemId.length() > 64 || name == null || name.length() > 150) {
                 skipped++;
+                review.add(itemNode, "INVALID_ITEM", "Check the Clover item ID and name. Names must be present and at most 150 characters.");
                 continue;
             }
 
@@ -92,7 +94,7 @@ public class CloverInventorySyncService {
                 barcode = "CLOVER-" + cloverItemId;
             }
 
-            if (barcode.length() > 64) { skipped++; continue; }
+            if (barcode.length() > 64) { skipped++; review.add(itemNode, "INVALID_BARCODE", "Use a barcode of at most 64 characters in Clover, then sync again."); continue; }
 
             // An absent stock record is unknown, never evidence of zero stock.
             BigDecimal quantity = quantities.get(cloverItemId);
@@ -108,6 +110,7 @@ public class CloverInventorySyncService {
             if (barcodeOwner.isPresent() && (existingProduct.isEmpty()
                     || !java.util.Objects.equals(barcodeOwner.get().getCloverItemId(), cloverItemId))) {
                 skipped++;
+                review.add(itemNode, "BARCODE_CONFLICT", "Give distinct products unique barcodes in Clover. If both entries represent the same product, contact support before merging; Splynt never merges automatically.");
                 continue;
             }
 
@@ -116,7 +119,7 @@ public class CloverInventorySyncService {
                     skipped++;
                     continue;
                 }
-                if (quantity == null) skipped++;
+                if (quantity == null) { skipped++; review.unknownStock(itemNode); }
                 updateExistingProduct(
                         existingProduct.get(),
                         cloverItemId,
@@ -130,7 +133,7 @@ public class CloverInventorySyncService {
                 continue;
             }
 
-            if (quantity == null) skipped++;
+            if (quantity == null) { skipped++; review.unknownStock(itemNode); }
             Product product = new Product(
                     store,
                     barcode,
@@ -160,8 +163,25 @@ public class CloverInventorySyncService {
                 created,
                 updated,
                 skipped,
-                java.time.OffsetDateTime.now()
+                java.time.OffsetDateTime.now(), review.count, java.util.List.copyOf(review.issues)
         );
+    }
+
+    private static class ImportReview {
+        int count;
+        final java.util.List<com.aieyaan.splynt.clover.dto.CloverImportIssue> issues = new java.util.ArrayList<>();
+        void unknownStock(JsonNode item) {
+            add(item, "UNKNOWN_STOCK", "Check stock tracking and the balance in Clover, then sync again. Splynt supports up to six decimal places and balances below one trillion in magnitude; missing or unsupported stock stays unknown.");
+        }
+        void add(JsonNode item, String reason, String nextStep) {
+            count++;
+            if (issues.size() < 100) issues.add(new com.aieyaan.splynt.clover.dto.CloverImportIssue(
+                    bounded(item, "id", 64), bounded(item, "name", 150), bounded(item, "code", 64), reason, nextStep));
+        }
+        private String bounded(JsonNode item, String field, int max) {
+            String value = item.path(field).asText("").trim();
+            return value.isEmpty() ? null : value.substring(0, Math.min(value.length(), max));
+        }
     }
 
     private Map<String, BigDecimal> extractStockQuantities(

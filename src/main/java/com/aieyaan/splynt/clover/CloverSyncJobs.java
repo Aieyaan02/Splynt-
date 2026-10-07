@@ -20,9 +20,7 @@ public class CloverSyncJobs {
         try {
             CloverSyncResponse result = sync.synchronize(storeId);
             transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId).ifPresent(connection -> {
-                connection.markSynchronized();
-                if (result.skipped() > 0) connection.markSyncFailed(result.skipped()
-                        + " items need review: archived, barcode conflicts, invalid details, or unknown stock. Review Clover inventory.");
+                connection.recordInventoryReview(result);
             }));
             try { sales.synchronize(storeId); }
             catch (RuntimeException salesFailure) {

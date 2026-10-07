@@ -8,6 +8,8 @@ public record CloverSyncResponse(
         int created,
         int updated,
         int skipped,
-        OffsetDateTime synchronizedAt
+        OffsetDateTime synchronizedAt,
+        int issueCount,
+        java.util.List<CloverImportIssue> issues
 ) {
 }

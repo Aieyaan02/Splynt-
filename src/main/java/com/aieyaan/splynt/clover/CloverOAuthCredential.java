@@ -42,11 +42,26 @@ public class CloverOAuthCredential {
     }
     public void markSalesFailed() { salesSyncError = "Sales history could not be refreshed. Check Clover order-read permission and reconnect if needed."; }
 
+    @Column(name = "inventory_issues_json", columnDefinition = "text") private String inventoryIssuesJson;
+    @Column(name = "inventory_issue_count", nullable = false) private int inventoryIssueCount;
+    public int getInventoryIssueCount() { return inventoryIssueCount; }
+    public java.util.List<com.aieyaan.splynt.clover.dto.CloverImportIssue> getInventoryIssues() {
+        return inventoryIssuesJson == null ? java.util.List.of() : java.util.List.of(new tools.jackson.databind.json.JsonMapper()
+                .readValue(inventoryIssuesJson, com.aieyaan.splynt.clover.dto.CloverImportIssue[].class));
+    }
+    public void recordInventoryReview(com.aieyaan.splynt.clover.dto.CloverSyncResponse result) {
+        if (lastSyncedAt != null && lastSyncedAt.isAfter(result.synchronizedAt())) return;
+        lastSyncedAt = result.synchronizedAt();
+        lastSyncError = result.issueCount() == 0 ? null : result.issueCount()
+                + " inventory items need review. Open import details for the affected items and next steps.";
+        inventoryIssueCount = result.issueCount();
+        inventoryIssuesJson = new tools.jackson.databind.json.JsonMapper().writeValueAsString(result.issues());
+    }
+
     public Long getStoreId() { return storeId; }
     public void assignStore(Long storeId) { this.storeId = java.util.Objects.requireNonNull(storeId); }
     public OffsetDateTime getLastSyncedAt() { return lastSyncedAt; }
     public String getLastSyncError() { return lastSyncError; }
-    public void markSynchronized() { lastSyncedAt = OffsetDateTime.now(); lastSyncError = null; }
     public void markSyncFailed(String error) { lastSyncError = error; }
 
 

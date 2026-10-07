@@ -169,4 +169,22 @@ class CloverInventorySyncServiceTest {
         assertFalse(captor.getValue().isLowStock());
         verifyNoInteractions(movements);
     }
+    @Test void reviewListIsBoundedButTotalIncludesEveryProblem() {
+        var response = json.createObjectNode(); var elements = response.putArray("elements");
+        for (int i = 0; i < 105; i++) elements.addObject().put("id", "item" + i).put("name", "x".repeat(200));
+        when(client.getItems(1L)).thenReturn(response);
+        when(client.getItemStocks(1L)).thenReturn(json.readTree("{\"elements\":[]}"));
+        var result = service.synchronize(1L);
+        assertEquals(105, result.issueCount()); assertEquals(100, result.issues().size());
+        assertEquals("INVALID_ITEM", result.issues().getFirst().reason());
+        assertEquals(150, result.issues().getFirst().name().length());
+    }
+
+    @Test void archivesAreNotActionableImportProblems() {
+        stock("3"); product.setActive(false);
+        var result = service.synchronize(1L);
+        assertEquals(1, result.skipped()); assertEquals(0, result.issueCount());
+        assertTrue(result.issues().isEmpty());
+    }
+
 }
