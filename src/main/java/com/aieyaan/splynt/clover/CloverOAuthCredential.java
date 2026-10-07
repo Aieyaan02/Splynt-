@@ -32,13 +32,18 @@ public class CloverOAuthCredential {
     @Column(name = "sales_synced_at") private OffsetDateTime salesSyncedAt;
     @Column(name = "sales_coverage_start") private OffsetDateTime salesCoverageStart;
     @Column(name = "sales_sync_error", length = 255) private String salesSyncError;
+    @Column(name = "sales_retry_from") private OffsetDateTime salesRetryFrom;
+    public OffsetDateTime getSalesRetryFrom() { return salesRetryFrom; }
+    public void recordSalesRetry(OffsetDateTime cursor, boolean unresolved) {
+        salesRetryFrom = unresolved ? cursor : null;
+    }
     public OffsetDateTime getSalesSyncedAt() { return salesSyncedAt; }
     public OffsetDateTime getSalesCoverageStart() { return salesCoverageStart; }
     public String getSalesSyncError() { return salesSyncError; }
     public void markSalesSynchronized(OffsetDateTime at, OffsetDateTime coverage, int skipped) {
         salesSyncedAt = at;
         if (salesCoverageStart == null) salesCoverageStart = coverage;
-        salesSyncError = skipped == 0 ? null : skipped + " orders or lines excluded: unpaid, refunded, test, unmatched or unsupported data.";
+        salesSyncError = skipped == 0 ? null : skipped + " paid orders or lines could not be imported. Splynt will retry the affected import window; check catalog matches and supported quantities.";
     }
     public void markSalesFailed() { salesSyncError = "Sales history could not be refreshed. Check Clover order-read permission and reconnect if needed."; }
 

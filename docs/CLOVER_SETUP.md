@@ -94,3 +94,9 @@ Prices are displayed for FIXED/PER_UNIT pricing; VARIABLE prices are set at sale
 A mismatch with Splynt's store currency is shown in product details. There is no conversion or automatic relabeling of local costs. Imported cost is reference metadata; inventory valuation continues using the independently entered Splynt unit cost. Verify both currencies before using imported costs for purchasing decisions. Live merchant currency/price acceptance remains required.
 
 References: [Clover inventory money format](https://docs.clover.com/dev/docs/managing-items-item-groups), [merchant properties](https://docs.clover.com/dev/reference/merchantgetmerchantproperties).
+
+## Recovering incomplete sales imports
+
+V16 adds a persisted retry cursor. If a paid order has unsupported quantities, missing product matches or malformed required fields, subsequent imports repeat the affected window rather than advancing past the missing data. The warning blocks AI generation until that window imports cleanly. Unpaid, refunded, test, deleted, fee and out-of-coverage records are intentional exclusions and do not create this warning. Failed provider requests roll back the sales transaction and preserve its cursor.
+
+For existing connections V16 schedules one re-read from the stored coverage start, because older versions could clear a warning without retrying the original omissions. No history before that coverage is invented. Re-reading is idempotent by order/line identity. A permanently unsupported paid line keeps the retry window open, which increases provider traffic; inspect catalog/quantity issues and load-test larger histories before release. This is recovery for incomplete imports, not a claim that every Clover sale is supported.

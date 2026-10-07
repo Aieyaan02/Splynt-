@@ -66,4 +66,26 @@ class CloverSalesSyncServiceTest {
         assertEquals(0, CloverSalesSyncService.units(json.readTree("{\"quantitySold\":3}")).compareTo(new BigDecimal("3")));
         assertNull(CloverSalesSyncService.units(json.readTree("{\"quantitySold\":-1}")));
     }
+    @Test void unresolvedPaidLinesRetryOriginalWindowUntilCatalogMatchReturns() {
+        when(client.getOrderLines(store.getId(), "order1")).thenReturn(json.readTree("{\"elements\":[{\"id\":\"line1\",\"item\":{\"id\":\"missing\"}}]}"));
+        sync.synchronize(store.getId());
+        var connection = credentials.findByStoreId(store.getId()).orElseThrow();
+        var retryFrom = connection.getSalesRetryFrom();
+        assertNotNull(retryFrom); assertNotNull(connection.getSalesSyncError());
+        sync.synchronize(store.getId());
+        assertEquals(retryFrom, connection.getSalesRetryFrom());
+        verify(client, times(2)).getOrdersModifiedSince(store.getId(), retryFrom.toInstant().toEpochMilli());
+        when(client.getOrderLines(store.getId(), "order1")).thenReturn(json.readTree("{\"elements\":[{\"id\":\"line1\",\"item\":{\"id\":\"item1\"}}]}"));
+        sync.synchronize(store.getId());
+        assertNull(connection.getSalesRetryFrom()); assertNull(connection.getSalesSyncError());
+        assertEquals(1, sales.findAllByStoreIdAndOccurredAtGreaterThanEqualOrderByOccurredAtAsc(store.getId(), retryFrom).size());
+    }
+    @Test void intentionalUnpaidAndRefundedExclusionsDoNotBlockAdvice() {
+        for (String state : new String[]{"OPEN", "REFUNDED", "PARTIALLY_REFUNDED"}) {
+            orders(state); sync.synchronize(store.getId());
+            var connection = credentials.findByStoreId(store.getId()).orElseThrow();
+            assertNull(connection.getSalesSyncError()); assertNull(connection.getSalesRetryFrom());
+        }
+    }
+
 }

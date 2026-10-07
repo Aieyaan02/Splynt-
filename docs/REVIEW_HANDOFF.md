@@ -21,7 +21,7 @@ Implemented:
 
 Validation includes backend tests, frontend build/lint, PostgreSQL migrations/schema, and a simulated-provider signup/login/OAuth/import/low-stock/failure-recovery journey. Concurrent AI success/failure requests and report retention are covered. Inspect CI at the current PR head; earlier green runs do not prove later changes.
 
-Migrations V7–V15 are included. Imported currency support is limited to two-decimal currencies. Location is context, not measured local demand. New connections start with 90 days of sales; partially refunded orders are conservatively excluded. Contact submissions do not send email. AI generation holds a store lock during its bounded provider request.
+Migrations V7–V16 are included. Imported currency support is limited to two-decimal currencies. Location is context, not measured local demand. New connections start with 90 days of sales; partially refunded orders are conservatively excluded. Contact submissions do not send email. AI generation holds a store lock during its bounded provider request.
 
 Do not merge or deploy production until the outstanding acceptance items below are resolved.
 
@@ -32,7 +32,7 @@ Do not merge or deploy production until the outstanding acceptance items below a
 | Work separately from the deployed version | Development branch and push history; CI has no deploy steps | Inspect actual Render production branch/settings; create and verify isolated staging before any release |
 | Create an account and connect own store | `StoreOnboardingAcceptanceTest` exercises signup, real JWT login, browser-bound OAuth callback and tenant denial with real services/database | Actual Clover sandbox browser consent, redirect configuration, scopes and reconnect/expiry acceptance |
 | Pull stock and show low inventory | Decimal, unknown-stock, barcode identity, pagination, import issue, product HTTP and connected low-stock tests | Representative live catalogs, large-import/rate-limit behavior, and read-only stock parity with Clover |
-| Read stock flow and best sellers | Paid-order ingestion, adjustments separated from sales, order-ranked products and stock-cover calculations | Review skipped-sales coverage and product measurement changes over time; live order/refund parity |
+| Read stock flow and best sellers | Paid-order ingestion, adjustments separated from sales, order-ranked products and stock-cover calculations | Verify retry-window recovery on live catalogs and review product measurement changes over time; live order/refund parity |
 | Day/time/season/location and product ideas | Order-based timing, covered-month comparisons, optional AI with evidence snapshots and coarse location context | Actual model quality/adversarial-name evaluation, consented provider setup; location is not independent market evidence |
 | Polished startup UI/UX | Implemented responsive landing/workspace/dialog styles; TypeScript build/lint pass | Permitted browser rendering, mobile/desktop, keyboard/focus, error/loading and accessibility checks. Earlier browser denial remains in force |
 | Discovery website and contact | Landing, product explanation, FAQs, inquiry persistence and authorized inbox tests | Visual acceptance, designated verified operator, operational response workflow and desired public contact identity |

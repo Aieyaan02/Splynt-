@@ -28,6 +28,8 @@ public class CloverSalesSyncService {
         OffsetDateTime started = OffsetDateTime.now();
         OffsetDateTime coverage = connection.getSalesCoverageStart() == null ? started.minusDays(90) : connection.getSalesCoverageStart();
         OffsetDateTime cursor = connection.getSalesSyncedAt() == null ? coverage : connection.getSalesSyncedAt().minusMinutes(5);
+        if (connection.getSalesRetryFrom() != null && connection.getSalesRetryFrom().isBefore(cursor))
+            cursor = connection.getSalesRetryFrom();
         JsonNode orders = client.getOrdersModifiedSince(storeId, cursor.toInstant().toEpochMilli()).path("elements");
         if (!orders.isArray()) throw new IllegalStateException("Invalid Clover orders response");
         int skipped = 0;
@@ -39,23 +41,26 @@ public class CloverSalesSyncService {
             sales.flush();
             long created = order.path("createdTime").asLong(0);
             if (!"PAID".equals(order.path("paymentState").asText()) || order.path("testMode").asBoolean(false)
-                    || order.path("deletedTimestamp").asLong(0) > 0 || created <= 0) { skipped++; continue; }
+                    || order.path("deletedTimestamp").asLong(0) > 0) continue;
+            if (created <= 0) { skipped++; continue; }
             OffsetDateTime occurred = OffsetDateTime.ofInstant(Instant.ofEpochMilli(created), ZoneOffset.UTC);
-            if (occurred.isBefore(coverage) || occurred.isAfter(started.plusMinutes(5))) { skipped++; continue; }
+            if (occurred.isBefore(coverage)) continue;
+            if (occurred.isAfter(started.plusMinutes(5))) { skipped++; continue; }
             JsonNode lines = client.getOrderLines(storeId, id).path("elements");
             if (!lines.isArray()) throw new IllegalStateException("Invalid Clover order lines response");
             for (JsonNode line : lines) {
                 String lineId = line.path("id").asText("");
                 String itemId = line.path("item").path("id").asText("");
-                if (!lineId.matches("[A-Za-z0-9_-]{1,64}") || itemId.isBlank()
-                        || line.path("refunded").asBoolean(false) || line.path("exchanged").asBoolean(false)
-                        || line.path("isOrderFee").asBoolean(false)) { skipped++; continue; }
+                if (line.path("refunded").asBoolean(false) || line.path("exchanged").asBoolean(false)
+                        || line.path("isOrderFee").asBoolean(false)) continue;
+                if (!lineId.matches("[A-Za-z0-9_-]{1,64}") || itemId.isBlank()) { skipped++; continue; }
                 var product = products.findByStoreIdAndCloverItemId(storeId, itemId);
                 BigDecimal units = units(line);
                 if (product.isEmpty() || units == null) { skipped++; continue; }
                 sales.save(new SalesEvent(storeId, product.get().getId(), id, lineId, units, occurred));
             }
         }
+        connection.recordSalesRetry(cursor, skipped > 0);
         connection.markSalesSynchronized(started, coverage, skipped);
     }
     static BigDecimal units(JsonNode line) {
