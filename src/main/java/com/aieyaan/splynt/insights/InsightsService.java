@@ -31,16 +31,17 @@ public class InsightsService {
         AnalysisWindow window = analysisWindow(coverage, synced, zone, Instant.now());
         ZonedDateTime start = window.start().atStartOfDay(zone);
         ZonedDateTime end = window.end().atStartOfDay(zone);
-        var events = sales.findAllByStoreIdAndOccurredAtGreaterThanEqualOrderByOccurredAtAsc(storeId, start.toOffsetDateTime());
+        var events = sales.findWindow(storeId, YearMonth.from(end).minusMonths(24).atDay(1).atStartOfDay(zone).toOffsetDateTime(), end.toOffsetDateTime());
         Map<Long, Product> catalog = new HashMap<>();
         products.findAllByStoreIdAndActiveTrueOrderByNameAsc(storeId).forEach(p -> catalog.put(p.getId(), p));
         Summary summary = calculate(events, catalog, zone, start.toLocalDate(), end.toLocalDate());
+        var history = HistoricalSalesAnalysis.calculate(events, catalog, zone, coverage, end.toLocalDate());
         String location = java.util.stream.Stream.of(store.getCity(), store.getState(), store.getCountryCode())
                 .filter(s -> s != null && !s.isBlank()).collect(java.util.stream.Collectors.joining(", "));
         return new Insights(store.getName(), location, zone.getId(), synced, syncError,
                 start.toLocalDate(), end.toLocalDate(), summary,
                 "Paid, non-refunded Clover order lines only. Timing reflects order creation, not checkout time. Only full local calendar days covered by the last successful import are included.",
-                "Seasonal conclusions need comparable periods across multiple years. Current rolling data is not sufficient to establish seasonality.");
+                history.status(), history);
     }
     // A failed or stopped importer must not turn missing days into zero-sale days.
     static AnalysisWindow analysisWindow(OffsetDateTime coverage, OffsetDateTime synced, ZoneId zone, Instant now) {
@@ -91,5 +92,5 @@ public class InsightsService {
     public record Summary(int completeDays, int orders, BigDecimal units, boolean sufficientForVelocity,
             List<ProductInsight> topProducts, List<BigDecimal> hourlyUnits, List<BigDecimal> weekdayUnits) {}
     public record Insights(String storeName, String location, String timezone, OffsetDateTime lastSyncedAt, String syncError,
-            LocalDate from, LocalDate untilExclusive, Summary summary, String methodology, String seasonalStatus) {}
+            LocalDate from, LocalDate untilExclusive, Summary summary, String methodology, String seasonalStatus, HistoricalSalesAnalysis.History history) {}
 }

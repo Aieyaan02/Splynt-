@@ -52,3 +52,9 @@ Dashboard calculations use up to 30 full local calendar days covered by the last
 Owners and admins can open **Store settings** beside the store picker to set the store name, city, region, country and IANA timezone. This changes how existing sales timestamps are grouped; it does not alter original order times. Set the store currency before adding products or connecting Clover. Splynt does not convert existing inventory costs between currencies.
 
 Use **Add store** to create another store inside an organization you own or administer. Each store has its own Clover connection, stock and reporting context. Choose the new store in the picker, then connect the matching Clover merchant. Settings edits use version checks to reject stale forms. Disabled accounts and inactive organizations cannot access stores with previously issued tokens.
+
+### Historical comparisons
+
+The dashboard now keeps a 24-month view of completed calendar months, compares daily sales rates against the same month in the preceding year, and compares leading products for the latest completed month. Missing or partially covered months are unknown; fully covered months with no included sales are zero. Month length and leap years are accounted for. The same historical evidence is available to AI reports.
+
+The importer initially fetches up to 90 days, then accumulates history. The comparison feature does not fabricate older history. A recurring month pattern is shown only after two full annual cycles with at least 30 included orders per month, and requires both observations to be at least 20% above/below the corresponding annual daily averages. This is exploratory evidence; promotions, stockouts, store closures and assortment changes are not controlled. Product percentage comparisons require at least 10 included orders for that product in each month. These sample thresholds are practical heuristics, not statistical confidence guarantees.

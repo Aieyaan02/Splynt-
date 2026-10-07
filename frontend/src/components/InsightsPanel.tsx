@@ -1,3 +1,4 @@
+import { HistoricalSales } from "./HistoricalSales";
 import { useEffect, useState } from "react";
 import { insightsApi, type SalesInsights } from "../lib/api";
 export function InsightsPanel({ storeId }: { storeId: number }) {
@@ -23,6 +24,7 @@ export function InsightsPanel({ storeId }: { storeId: number }) {
                 {!data.summary.sufficientForVelocity && <p className="detail-info">Daily velocity estimates need at least 14 complete days and 30 included orders. We’ll show estimates when there’s enough data.</p>}
                 {data.summary.topProducts.length > 0 ? <div className="table-wrapper"><table><thead><tr><th>Product</th><th>Units sold</th><th>Units / day</th><th>Estimated stock cover</th></tr></thead><tbody>{data.summary.topProducts.map(product => <tr key={product.productId}><td><strong>{product.name}</strong></td><td>{product.units.toLocaleString()}</td><td>{product.unitsPerDay ?? "More data needed"}</td><td>{product.estimatedDaysRemaining === null ? "—" : `${product.estimatedDaysRemaining} days`}</td></tr>)}</tbody></table></div> : <p className="detail-info">No qualifying product sales in this window yet.</p>}
                 <div className="insight-timing"><div><h3>Time of day</h3><BarChart values={data.summary.hourlyUnits} labels={Array.from({ length: 24 }, (_, hour) => `${hour}:00`)} /></div><div><h3>Day of week</h3><BarChart values={data.summary.weekdayUnits} labels={["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]} /></div></div>
+                <HistoricalSales history={data.history} />
                 <details className="insight-method"><summary>How to read these insights</summary><p>{data.methodology}</p><p>Window: {data.from} up to {data.untilExclusive} (exclusive). Daily averages include days with no sales. Stock cover assumes that average continues; it is not a guarantee or a demand forecast. Timing bars show raw unit totals.</p><p>{data.seasonalStatus}</p></details>
             </>}
         </>}

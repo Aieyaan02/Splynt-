@@ -36,7 +36,7 @@ public class OpenAiAdviceClient {
                 Product experiments are unproven ideas: never promise more sales or claim local demand without supporting data.
                 Consider top sellers and local hour/day patterns. Location is context, not evidence of demographic preferences.
                 Do not infer seasonality from a single rolling window or assume hemisphere/weather from a country alone.
-                Current seasonal limitations must appear in limitations. No external market, competitor, weather or supplier data is available.
+                Use supplied calendar-month comparisons when available, but do not present correlations as causes or forecasts. Seasonal limitations must appear in limitations. No external market, competitor, weather or supplier data is available.
                 Do not claim an idea is absent from the store's full catalog: only leading products are supplied.
                 Timing is order creation, not checkout. Stock cover is an estimate, not a forecast. No automatic purchasing.
                 Keep summary under 1200 characters, each field under 1000 characters, actions at most 5,

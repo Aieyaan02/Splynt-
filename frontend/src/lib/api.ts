@@ -272,6 +272,12 @@ export const operationsApi = {
 export interface SalesInsights {
     storeName: string; location: string; timezone: string; lastSyncedAt: string | null; syncError: string | null;
     from: string; untilExclusive: string; methodology: string; seasonalStatus: string;
+    history: { completeMonths: number; sufficientForRecurringPatterns: boolean; status: string; methodology: string;
+        months: { month: string; complete: boolean; days: number; orders: number | null; units: number | null; unitsPerDay: number | null }[];
+        comparisons: { month: string; previousMonth: string; sufficient: boolean; dailyUnitsChangePercent: number | null }[];
+        recurringPatterns: { calendarMonth: number; direction: string; earlierIndex: number; latestIndex: number }[];
+        productComparisons: { productId: number; name: string; month: string; previousMonth: string; units: number; previousUnits: number; orders: number; previousOrders: number; sufficient: boolean; dailyUnitsChangePercent: number | null }[];
+    };
     summary: { completeDays: number; orders: number; units: number; sufficientForVelocity: boolean;
         topProducts: { productId: number; name: string; units: number; unitsPerDay: number | null; estimatedDaysRemaining: number | null; currentStock: number }[];
         hourlyUnits: number[]; weekdayUnits: number[]; };

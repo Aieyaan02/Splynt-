@@ -51,7 +51,7 @@ class AdviceHttpTest {
         return new InsightsService.Insights("Store", "Chicago, US", "America/Chicago", synced, null,
                 LocalDate.now().minusDays(30), LocalDate.now(), new InsightsService.Summary(30, enough ? 35 : 5, BigDecimal.valueOf(70), enough,
                 List.of(new InsightsService.ProductInsight(1L, "Coffee", BigDecimal.valueOf(70), BigDecimal.valueOf(2.33), BigDecimal.TEN, 23)),
-                Collections.nCopies(24, BigDecimal.ZERO), Collections.nCopies(7, BigDecimal.ZERO)), "Order creation times", "Not enough history for seasonality");
+                Collections.nCopies(24, BigDecimal.ZERO), Collections.nCopies(7, BigDecimal.ZERO)), "Order creation times", "Not enough history for seasonality", com.aieyaan.splynt.insights.HistoricalSalesAnalysis.calculate(List.of(), Map.of(), ZoneId.of("America/Chicago"), null, LocalDate.now()));
     }
     @Test void ownerGeneratesSavedReportButRepeatedRequestsUseCooldown() throws Exception {
         for (int i = 0; i < 2; i++) mvc.perform(post(path()).with(jwt().jwt(j -> j.subject(owner.getId().toString()))))

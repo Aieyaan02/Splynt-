@@ -56,7 +56,7 @@ public class AdviceService {
         data.put("location", Map.of("location", source.location(), "timezone", source.timezone(), "meaning", "Store context only; no local market demand data"));
         data.put("timing", Map.of("hourlyUnits", source.summary().hourlyUnits(), "weekdayUnitsMondayFirst", source.summary().weekdayUnits(),
                 "methodology", source.methodology()));
-        data.put("seasonality", source.seasonalStatus());
+        data.put("seasonality", source.history());
         for (var product : source.summary().topProducts()) data.put("product-" + product.productId(), product);
         return data;
     }

@@ -1,3 +1,5 @@
+import { HistoricalSales } from "./HistoricalSales";
+import type { SalesInsights } from "../lib/api";
 import { useEffect, useRef, useState } from "react";
 import { adviceApi, type AdviceView } from "../lib/api";
 export function AdvicePanel({ storeId, canManage }: { storeId: number; canManage: boolean }) {
@@ -48,6 +50,7 @@ export function AdvicePanel({ storeId, canManage }: { storeId: number; canManage
 function EvidenceView({ value }: { value: unknown }) {
     if (value === null || value === undefined) return <span>Not available</span>;
     if (typeof value !== "object") return <p>{String(value)}</p>;
+    if ("months" in value && "comparisons" in value && "methodology" in value) return <HistoricalSales history={value as SalesInsights["history"]} />;
     const labels: Record<string, string> = { name: "Product", units: "Units in included orders", unitsPerDay: "Average units per day", estimatedDaysRemaining: "Estimated days of stock", currentStock: "Stock at generation", from: "First day", untilExclusive: "End date (exclusive)", completeDays: "Complete days", orders: "Included orders", timezone: "Store timezone", meaning: "Interpretation", location: "Location", methodology: "Method", hourlyUnits: "Units by local hour", weekdayUnitsMondayFirst: "Units by weekday" };
     return <dl className="advice-evidence">{Object.entries(value).filter(([key]) => key !== "productId").map(([key, item]) => <div key={key}><dt>{labels[key] ?? key}</dt><dd>{Array.isArray(item) ? item.map((amount, index) => `${key === "hourlyUnits" ? `${index}:00` : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index] ?? index}: ${amount}`).join(" · ") : item === null ? "Not available" : String(item)}</dd></div>)}</dl>;
 }
