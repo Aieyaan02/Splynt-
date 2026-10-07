@@ -205,3 +205,7 @@ Authenticated 401 responses now notify the application, remove the expired token
 ### Dashboard refresh after provider sync
 
 The Clover connection poll now waits for its prior check and dashboard refresh to settle before starting another check. A completed provider timestamp is acknowledged only after the dashboard read succeeds; failed reads retry at the next poll even when Clover has not produced a newer import. The dashboard callback propagates failures to this tracker. Node tests cover failed-read retry, overlapping refresh calls, newer snapshots and missing initial imports. Frontend tests (11), lint and build pass; browser acceptance remains outstanding.
+
+### Consistent low-stock dashboard snapshot
+
+The low-stock summary and list now derive from the active product response's server-calculated lowStock flags. Previously, separate inventory and low-stock requests could observe different committed imports and disagree. This removes a redundant request on each refresh while retaining server rules for unknown quantities and reorder thresholds. Frontend tests and build passed; lint is clean. Browser acceptance remains pending.

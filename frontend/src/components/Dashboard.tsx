@@ -101,8 +101,8 @@ export function Dashboard({
     const [products, setProducts] =
         useState<Product[]>([]);
 
-    const [lowStockProducts, setLowStockProducts] =
-        useState<Product[]>([]);
+    // Keep summary and table on the same server snapshot during background imports.
+    const lowStockProducts = products.filter(product => product.lowStock);
 
     const [archivedProducts, setArchivedProducts] =
         useState<Product[]>([]);
@@ -153,17 +153,14 @@ export function Dashboard({
         try {
             const [
                 allProducts,
-                lowStock,
                 archived
             ] = await Promise.all([
                 productApi.getAll(selectedStoreId),
-                productApi.getLowStock(selectedStoreId),
                 productApi.getArchived(selectedStoreId)
             ]);
 
             if (generation !== requestGeneration.current) return;
             setProducts(allProducts);
-            setLowStockProducts(lowStock);
             setArchivedProducts(archived);
         } catch (requestError) {
             if (generation === requestGeneration.current) setError(getErrorMessage(requestError));
@@ -171,7 +168,7 @@ export function Dashboard({
         } finally {
             if (generation === requestGeneration.current) setLoading(false);
         }
-    }, [selectedStoreId]);
+    }, [selectedStoreId, setArchivedProducts]);
 
     useEffect(() => {
         if (selectedStoreId === null) {
@@ -299,7 +296,7 @@ export function Dashboard({
                             disabled={storeAccesses.length === 0}
                             onChange={event => {
                                 requestGeneration.current++;
-                                setProducts([]); setLowStockProducts([]); setArchivedProducts([]);
+                                setProducts([]); setArchivedProducts([]);
                                 setInventorySelection(null); setProductDialogOpen(false); setDetailProduct(null);
                                 setSearch(""); setCategoryFilter(""); setStockFilter("all");
                                 activeStoreId.current = Number(event.target.value);
@@ -883,7 +880,7 @@ export function Dashboard({
                     const refreshed = await accountApi.getCurrent();
                     onAccountChanged(refreshed);
                     requestGeneration.current++;
-                    if (id !== selectedStoreId) { setProducts([]); setLowStockProducts([]); setArchivedProducts([]); }
+                    if (id !== selectedStoreId) { setProducts([]); setArchivedProducts([]); }
                     setInventorySelection(null); setProductDialogOpen(false); setDetailProduct(null);
                     activeStoreId.current = id; setSelectedStoreId(id); setStoreRevision(current => current + 1);
                 }} />}
