@@ -29,6 +29,7 @@ Open `http://localhost:5173`. If using backend port 8087, start Vite with `SPLYN
 ```sh
 ./mvnw clean verify
 npm --prefix frontend ci
+npm --prefix frontend test
 npm --prefix frontend run lint
 npm --prefix frontend run build
 ```

@@ -1,3 +1,4 @@
+import { confirmedMutation } from "../lib/confirmedMutation";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
@@ -30,6 +31,8 @@ export function InventoryDialog({
     const dialogReference =
         useRef<HTMLDialogElement>(null);
 
+    const operationState = useRef(confirmedMutation());
+    const [saved, setSaved] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [note, setNote] = useState("");
     const [busy, setBusy] = useState(false);
@@ -50,14 +53,14 @@ export function InventoryDialog({
 
         setError("");
 
-        if (quantity <= 0) {
+        if (!saved && quantity <= 0) {
             setError(
                 "Quantity must be greater than zero"
             );
             return;
         }
 
-        if (product.quantity === null || (isSale && quantity > product.quantity)) {
+        if (!saved && (product.quantity === null || (isSale && quantity > product.quantity))) {
             setError(
                 `Only ${product.quantity} units are available`
             );
@@ -72,24 +75,17 @@ export function InventoryDialog({
                 note: note.trim() || null
             };
 
-            if (isSale) {
-                await inventoryApi.recordSale(
-                    storeId,
-                    product.id,
-                    request
-                );
-            } else {
-                await inventoryApi.recordRestock(
-                    storeId,
-                    product.id,
-                    request
-                );
-            }
-
-            await onSaved();
+            await operationState.current.run(
+                () => isSale ? inventoryApi.recordSale(storeId, product.id, request)
+                    : inventoryApi.recordRestock(storeId, product.id, request),
+                onSaved,
+                () => setSaved(true)
+            );
             onClose();
         } catch (requestError) {
-            if (requestError instanceof ApiRequestError) {
+            if (operationState.current.saved) {
+                setError("Your inventory change was saved, but the dashboard could not refresh. Retry the refresh; your change will not be submitted again.");
+            } else if (requestError instanceof ApiRequestError) {
                 setError(requestError.message);
             } else {
                 setError(
@@ -107,6 +103,7 @@ export function InventoryDialog({
         <dialog
             ref={dialogReference}
             className="modal compact-modal"
+            aria-labelledby="inventory-operation-title"
             onCancel={event => {
                 event.preventDefault();
 
@@ -125,7 +122,7 @@ export function InventoryDialog({
                             Inventory movement
                         </span>
 
-                        <h2>
+                        <h2 id="inventory-operation-title">
                             {isSale
                                 ? "Record sale"
                                 : "Record restock"}
@@ -149,7 +146,7 @@ export function InventoryDialog({
                 </header>
 
                 {error && (
-                    <div className="message error-message">
+                    <div className="message error-message" role="alert">
                         {error}
                     </div>
                 )}
@@ -157,6 +154,7 @@ export function InventoryDialog({
                 <label>
                     Quantity
                     <input
+                        disabled={busy || saved}
                         type="number"
                         min="0.000001"
                         step="0.000001"
@@ -178,6 +176,7 @@ export function InventoryDialog({
                 <label>
                     Note
                     <textarea
+                        disabled={busy || saved}
                         rows={4}
                         value={note}
                         onChange={event =>
@@ -198,7 +197,7 @@ export function InventoryDialog({
                         disabled={busy}
                         onClick={onClose}
                     >
-                        Cancel
+                        {saved ? "Close" : "Cancel"}
                     </button>
 
                     <button
@@ -207,8 +206,8 @@ export function InventoryDialog({
                         disabled={busy}
                     >
                         {busy
-                            ? "Saving..."
-                            : isSale
+                            ? saved ? "Refreshing…" : "Saving…"
+                            : saved ? "Refresh dashboard" : isSale
                                 ? "Record sale"
                                 : "Record restock"}
                     </button>

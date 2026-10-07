@@ -54,9 +54,9 @@ export function ProductDetailsDialog({ product, storeId, canManage, timezone, on
                 <div><dt>Available in Clover</dt><dd>{product.cloverDetails.available === null ? "Not provided" : product.cloverDetails.available ? "Yes" : "No"}</dd></div>
                 <div><dt>Hidden in Clover</dt><dd>{product.cloverDetails.hidden === null ? "Not provided" : product.cloverDetails.hidden ? "Yes" : "No"}</dd></div>
             </dl><p>These fields come from Clover. Hidden or unavailable does not mean the product is archived in Splynt.</p><p>Clover prices follow the merchant’s tax settings. Imported costs are shown for reference; Splynt uses your local unit cost for inventory valuation.</p>{!product.cloverDetails.money?.currency && <p>Merchant currency could not be verified or is unsupported. Imported money is unavailable until a sync can verify it.</p>}{product.cloverDetails.money?.matchesStoreCurrency === false && <p className="message error-message">Clover uses {product.cloverDetails.money.currency}, which differs from this store’s currency. These amounts have not been converted. Check your store setup before entering local costs.</p>}</details>}
-            <div className="detail-tabs" role="tablist" aria-label="Product information">
-                {product.active && <button type="button" role="tab" aria-selected={tab === "settings"} onClick={() => setTab("settings")}>Stock settings</button>}
-                <button type="button" role="tab" aria-selected={tab === "history"} onClick={() => setTab("history")}>Inventory history <span>{history.length}</span></button>
+            <div className="detail-tabs" role="group" aria-label="Product information">
+                {product.active && <button type="button" aria-pressed={tab === "settings"} onClick={() => setTab("settings")}>Stock settings</button>}
+                <button type="button" aria-pressed={tab === "history"} onClick={() => setTab("history")}>Inventory history <span>{history.length}</span></button>
             </div>
             {tab === "settings" ? <form className="form-stack" onSubmit={save}>
                 {imported && <p className="detail-info">Clover manages this product’s name and stock quantity. Your reorder targets and unit cost are managed here in Splynt.</p>}

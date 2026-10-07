@@ -141,7 +141,7 @@ export function Dashboard({
             store => store.id === selectedStoreId
         ) ?? null;
 
-    const loadInventory = useCallback(async () => {
+    const loadInventory = useCallback(async (reportFailure = false) => {
         if (selectedStoreId === null || activeStoreId.current !== selectedStoreId) {
             return;
         }
@@ -167,6 +167,7 @@ export function Dashboard({
             setArchivedProducts(archived);
         } catch (requestError) {
             if (generation === requestGeneration.current) setError(getErrorMessage(requestError));
+            if (reportFailure) throw requestError;
         } finally {
             if (generation === requestGeneration.current) setLoading(false);
         }
@@ -917,7 +918,7 @@ export function Dashboard({
                         setInventorySelection(null)
                     }
                     onSaved={async () => {
-                        await loadInventory();
+                        await loadInventory(true);
                     }}
                 />
             )}
