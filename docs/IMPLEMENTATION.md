@@ -237,3 +237,7 @@ Added email-request/status and token-confirmation endpoints with input validatio
 ### Recovery and verification screens
 
 Added request/reset/verification pages, sign-in recovery link and unverified-account navigation. Forms expose delivery availability, generic request confirmation, password validation, explicit verification and retry paths. Link tokens are captured from fragments, removed from the visible URL and kept only in memory. Existing-session expiry no longer redirects away from recovery; successful reset clears local auth and verification refreshes account state. Fifteen frontend tests, lint and build pass. Browser and real SMTP acceptance remain unverified; no real email was sent.
+
+### Recovery record retention
+
+Added hourly maintenance independent of SMTP: cancel pending email jobs older than one hour, remove jobs older than seven days, delete expired action tokens and hour-old request-ledger records. Recent jobs and valid tokens remain usable. Scheduling is disabled in isolated tests, which call maintenance explicitly. Existing backend suite passes; PostgreSQL maintenance and recovery HTTP checks exercise actual cleanup and preserved functionality. Live email/browser acceptance remains outstanding.

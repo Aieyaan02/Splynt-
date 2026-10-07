@@ -31,7 +31,7 @@ Sending defaults to disabled. Configuration, when a staging SMTP provider is rea
 - `SPLYNT_ACCOUNT_EMAIL_ORIGIN`: trusted HTTPS application origin, no credentials, query, fragment or subpath.
 - `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD`: SMTP configuration; keep credentials outside Git/chat.
 
-Authentication and required STARTTLS are enabled, with 5-second connect and 10-second read/write timeouts. Use a provider compatible with this transport configuration; do not disable certificate verification. Links place their token in the URL fragment so it is not included in the initial HTTP request. Retention cleanup and operational delivery acceptance remain pending. Tests substitute a fake sender; no real mail was sent.
+Authentication and required STARTTLS are enabled, with 5-second connect and 10-second read/write timeouts. Use a provider compatible with this transport configuration; do not disable certificate verification. Links place their token in the URL fragment so it is not included in the initial HTTP request. Operational delivery acceptance remains pending; cleanup is described below. Tests substitute a fake sender; no real mail was sent.
 
 SMTP configuration follows [Spring Boot's email documentation](https://docs.spring.io/spring-boot/reference/io/email.html).
 
@@ -46,7 +46,7 @@ The following endpoints support the browser recovery pages:
 
 Confirmation uses POST, validates input and consumes the token atomically. It does not require an existing login. A configured delivery provider is needed to request a new email; existing valid links can still be redeemed during a delivery outage.
 
-V21 adds a shared database guard and request ledger. Requests are limited to three per normalized email per hour across both purposes, and twenty accepted requests per minute globally, including unknown addresses. A pessimistic database lock serializes admission across replicas. Ledger entries store an email hash, not the submitted address, and expire after an hour during subsequent requests. Rate-limited requests have the same response as other eligible-shaped requests; no guarantee of constant response timing is made. Edge request limits are still appropriate for high-volume abuse because application requests reach the database. Internal queue rows and expired action-token retention cleanup remain pending.
+V21 adds a shared database guard and request ledger. Requests are limited to three per normalized email per hour across both purposes, and twenty accepted requests per minute globally, including unknown addresses. A pessimistic database lock serializes admission across replicas. Ledger entries store an email hash, not the submitted address, and expire after an hour during subsequent requests. Rate-limited requests have the same response as other eligible-shaped requests; no guarantee of constant response timing is made. Edge request limits are still appropriate for high-volume abuse because application requests reach the database. Queue and token cleanup are described below.
 
 ## Browser flow
 
@@ -55,3 +55,9 @@ Sign-in includes Forgot your password. Unverified accounts have Verify email in 
 The page captures the token from the hash route and removes it from the visible URL/history entry without storing it in local/session storage. Reloading therefore requires reopening the email link. Invalid/duplicate token parameters cannot trigger confirmation. Expired-login events preserve the recovery route. Successful password reset clears the local login and offers sign-in; verification refreshes any active account before returning to the workspace.
 
 Frontend unit tests cover route parsing and unauthenticated API calls; build/lint pass. They are not rendered UI tests. Desktop/mobile/keyboard and real-email acceptance remain required.
+
+## Retention and maintenance
+
+Hourly maintenance removes expired action tokens and request-ledger entries older than an hour. Pending email jobs older than an hour are cancelled; all email jobs older than seven days are removed, including stored recipient addresses. Recent SENT/FAILED/CANCELLED jobs remain available for operational diagnosis. Cleanup starts a minute after startup and continues even when SMTP is disabled/unavailable. If the application is stopped, cleanup resumes when it next starts. The schedule can be disabled with `splynt.account-maintenance.enabled=false` for isolated tests.
+
+Cleanup uses job-before-token lock order consistent with delivery. PostgreSQL tests verify old data removal, stale-job cancellation and preservation of recent jobs and usable links. No retention change has been applied to production.

@@ -5,5 +5,5 @@ public interface AccountEmailRequestRepository extends JpaRepository<AccountEmai
     long countByCreatedAtAfter(OffsetDateTime since);
     long countByEmailHashAndCreatedAtAfter(String hash, OffsetDateTime since);
     @Modifying @Query("delete from AccountEmailRequest r where r.createdAt < :before")
-    void deleteExpired(OffsetDateTime before);
+    int deleteExpired(OffsetDateTime before);
 }
