@@ -225,3 +225,7 @@ PostgreSQL HTTP tests now start two real signed-token password-change requests t
 ### Recovery/verification token lifecycle foundation
 
 Added V19 and internal account-action issuance/redemption with 256-bit random tokens, hashed persistence, purpose/email/credential binding, expiry and single use. User-first locking and token re-query serialize competing redemptions; replacement invalidates earlier links. Invalid passwords leave tokens usable. Email changes increment the credential version, including protection against changing an email away and back. Six lifecycle tests cover these behaviors, including concurrent redemption. This is partial implementation: delivery, abuse controls, public API and recovery/verification screens remain to be built before the feature is usable.
+
+### Durable account-email delivery foundation
+
+Added V20 email-action jobs and optional SMTP delivery. Queue records contain account/purpose snapshots rather than raw tokens; a transactional worker issues a token and records SMTP acceptance. Failure rolls back issuance and retries with bounded backoff; stale credentials/old jobs are cancelled. Trusted HTTPS origins and explicit sender configuration are validated, STARTTLS/authentication and network timeouts configured, sending disabled by default. Seven fake-sender/queue tests cover success, deduplication, retry rollback/backoff, cancellation, limits and link configuration. Public recovery API/UI, throttling, cleanup and real transport acceptance are still pending.

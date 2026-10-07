@@ -17,3 +17,20 @@ V19 adds internal account-action tokens for password recovery and email verifica
 Redemption locks the account before the token, re-reads the token after acquiring the lock, and atomically changes the account and deletes the token. A successful password reset invalidates previous JWTs. Invalid new passwords do not consume otherwise valid links. Verification cannot be used as a password-reset token, or vice versa.
 
 There is deliberately no public issue/redeem controller yet. Before exposing this flow, finish delivery, request throttling, generic account-existence responses and browser pages. Never return the raw issuance token in a public API response or log it. The delivery workflow must address failures/retries and use a configured trusted application origin for links. No recovery or verification emails have been sent in this implementation checkpoint.
+
+## Queued SMTP delivery (public workflow still pending)
+
+V20 stores pending email actions with an account/email/credential snapshot. It never stores the raw action token. The worker generates a fresh token and submits the email within the job transaction, then marks the job SENT. SENT means the SMTP transport accepted the submission, not that the recipient received it. Jobs are locked for processing; repeated processing of a completed job does not send again. Duplicate pending requests for the same account/purpose are coalesced.
+
+Failures roll back token issuance and job completion. The scheduler records a separate failed attempt, retries after 2, 4, 8 and 16 minutes, and stops after five failures. Requests older than an hour or whose account credentials/email changed are cancelled. Already-verified accounts do not receive another verification message. SMTP and database commit are not an atomic external transaction: a crash after SMTP acceptance can lead to a duplicate email on retry, and a link sent before rollback may be invalid. Messages tell users to use the latest link. A permanent delivery failure still needs operator monitoring and a fresh user request.
+
+Sending defaults to disabled. Configuration, when a staging SMTP provider is ready:
+
+- `SPLYNT_ACCOUNT_EMAIL_ENABLED=true`
+- `SPLYNT_ACCOUNT_EMAIL_FROM`: provider-approved sender mailbox.
+- `SPLYNT_ACCOUNT_EMAIL_ORIGIN`: trusted HTTPS application origin, no credentials, query, fragment or subpath.
+- `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD`: SMTP configuration; keep credentials outside Git/chat.
+
+Authentication and required STARTTLS are enabled, with 5-second connect and 10-second read/write timeouts. Use a provider compatible with this transport configuration; do not disable certificate verification. Links place their token in the URL fragment so it is not included in the initial HTTP request. Public issue/redeem APIs, request throttling, recovery pages, retention cleanup and operational delivery acceptance remain pending. Tests substitute a fake sender; no real mail was sent.
+
+SMTP configuration follows [Spring Boot's email documentation](https://docs.spring.io/spring-boot/reference/io/email.html).
