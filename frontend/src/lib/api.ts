@@ -154,6 +154,9 @@ export const authApi = {
 };
 
 export const accountApi = {
+    changePassword(currentPassword: string, newPassword: string): Promise<void> {
+        return request("/api/me/password", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) });
+    },
     getCurrent(): Promise<Account> {
         return request<Account>("/api/me");
     }

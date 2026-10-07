@@ -23,6 +23,12 @@ public class AppUser {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
+    @jakarta.persistence.Version
+    private long version;
+
+    @Column(name = "credential_version", nullable = false)
+    private long credentialVersion;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -78,7 +84,10 @@ public class AppUser {
         this.emailVerified = false;
     }
 
+    public long getCredentialVersion() { return credentialVersion; }
+
     public void changePasswordHash(String passwordHash) {
+        credentialVersion++;
         this.passwordHash = requireText(
                 passwordHash,
                 "Password hash"

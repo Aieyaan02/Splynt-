@@ -213,3 +213,7 @@ The low-stock summary and list now derive from the active product response's ser
 ### Password encoding validation
 
 Signup and login now validate the password encoder's 72-byte UTF-8 limit before calling it. The previous 72-character limit accepted some multibyte passwords that the encoder could reject. Matching frontend validation provides actionable feedback without truncating or normalizing passwords. Backend validation/auth tests and 12 frontend tests pass, as do lint/build. Account recovery/email verification are still incomplete; an email-service preference has been requested without asking for secrets.
+
+### Authenticated password changes and session invalidation
+
+Added a current-password-protected account endpoint and workspace dialog. V18 adds credential and optimistic account versions. JWT checks reject older credentials after a change and disabled/deleted accounts; legacy signed tokens map to version zero until a change. The transaction locks/rechecks the account before changing it. HTTP tests exercise real signed-token rejection, new/old login behavior, validation, anonymous denial, legacy compatibility and other-user isolation. See ACCOUNT_SECURITY.md for deployment and in-flight-request limitations. Forgotten-password recovery/email verification remain outstanding.

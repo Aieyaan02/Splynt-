@@ -1,3 +1,4 @@
+import { PasswordDialog } from "./PasswordDialog";
 import { AdvicePanel } from "./AdvicePanel";
 import { StoreSettingsDialog } from "./StoreSettingsDialog";
 import { InsightsPanel } from "./InsightsPanel";
@@ -70,6 +71,7 @@ export function Dashboard({
         [account]
     );
 
+    const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
     const [storeDialog, setStoreDialog] = useState<{ id: number | null } | null>(null);
     const [storeRevision, setStoreRevision] = useState(0);
 
@@ -280,6 +282,7 @@ export function Dashboard({
 
     return (
         <div className="dashboard-layout">
+            {passwordDialogOpen && <PasswordDialog onClose={() => setPasswordDialogOpen(false)} onChanged={onLogout} />}
             <aside className="sidebar">
                 <div>
                     <Brand light />
@@ -363,6 +366,9 @@ export function Dashboard({
                                 </span>
                             )}
                         </button>
+                    <button className="navigation-item" type="button" onClick={() => setPasswordDialogOpen(true)}>
+                        <span>⚙</span> Change password
+                    </button>
                     </nav>
                 </div>
 

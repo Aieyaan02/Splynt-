@@ -12,7 +12,7 @@ Splynt needs a complete store onboarding and inventory workflow. This branch add
 
 Implemented:
 
-- Signup workspace flow, store settings and role/tenant controls; store-bound Clover OAuth with encrypted credentials, token refresh and scheduled imports.
+- Authenticated password changes with credential-version session invalidation; signup workspace flow, store settings and role/tenant controls; store-bound Clover OAuth with encrypted credentials, token refresh and scheduled imports.
 - Exact decimal stock, explicit unknown balances, actionable import issues, paginated category memberships and currency-qualified provider prices/costs. Local targets/costs remain independent.
 - Stock reconciliation history and concurrent-edit protection. Repeated adjustments no longer collide on reused provider product IDs.
 - Paid-order ingestion, product velocity/cover, distinct-order timing and monthly/year-over-year patterns. Product-specific quantities retain their own units.
@@ -21,7 +21,7 @@ Implemented:
 
 Validation includes backend tests, frontend build/lint, PostgreSQL migrations/schema, and a simulated-provider signup/login/OAuth/import/low-stock/failure-recovery journey. Concurrent AI success/failure requests and report retention are covered. Inspect CI at the current PR head; earlier green runs do not prove later changes.
 
-Migrations V7–V17 are included. Imported currency support is limited to two-decimal currencies. Location is context, not measured local demand. New connections start with 90 days of sales; partially refunded orders are conservatively excluded. Contact submissions do not send email. AI generation holds a store lock during its bounded provider request.
+Migrations V7–V18 are included. Imported currency support is limited to two-decimal currencies. Location is context, not measured local demand. New connections start with 90 days of sales; partially refunded orders are conservatively excluded. Contact submissions do not send email. AI generation holds a store lock during its bounded provider request.
 
 Do not merge or deploy production until the outstanding acceptance items below are resolved.
 

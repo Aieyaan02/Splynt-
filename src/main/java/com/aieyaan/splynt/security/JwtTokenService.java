@@ -39,6 +39,7 @@ public class JwtTokenService {
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .subject(user.getId().toString())
+                .claim("credential_version", user.getCredentialVersion())
                 .claim("email", user.getEmail())
                 .claim("name", user.getFullName())
                 .build();

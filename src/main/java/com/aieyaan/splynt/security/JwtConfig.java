@@ -58,7 +58,8 @@ public class JwtConfig {
     JwtDecoder jwtDecoder(
             SecretKey jwtSecretKey,
             @Value("${splynt.security.jwt.issuer:splynt-api}")
-            String issuer
+            String issuer,
+            AccountTokenValidator accountTokenValidator
     ) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder
                 .withSecretKey(jwtSecretKey)
@@ -66,7 +67,8 @@ public class JwtConfig {
                 .build();
 
         decoder.setJwtValidator(
-                JwtValidators.createDefaultWithIssuer(issuer)
+                new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(
+                        JwtValidators.createDefaultWithIssuer(issuer), accountTokenValidator)
         );
 
         return decoder;
