@@ -40,12 +40,13 @@ GitHub Actions runs these checks, PostgreSQL migration/schema and HTTP tests, th
 
 - [Clover setup and import behavior](docs/CLOVER_SETUP.md)
 - [Optional AI reports, evidence and limitations](docs/AI_RECOMMENDATIONS.md)
+- [Account recovery, verification and SMTP setup](docs/ACCOUNT_SECURITY.md)
 - [Contact inbox operations](docs/CONTACT_OPERATIONS.md)
 - [Separate Render staging service](docs/RENDER_STAGING.md)
 - [Implementation checkpoints and outstanding work](docs/IMPLEMENTATION.md)
 
 ## Current release limits
 
-This branch is still under development. Live Clover authorization/import and real AI output quality have not been verified. Browser/visual acceptance remains outstanding. Imported Clover prices/costs require a verified two-decimal merchant currency and remain separate from local valuation costs. Location provides context for product experiments, not measured local-market demand. Historical comparisons require accumulated coverage; new connections initially import 90 days. Account email verification/password recovery are not yet self-service.
+This branch is still under development. Live Clover authorization/import and real AI output quality have not been verified. Browser/visual acceptance remains outstanding. Imported Clover prices/costs require a verified two-decimal merchant currency and remain separate from local valuation costs. Location provides context for product experiments, not measured local-market demand. Historical comparisons require accumulated coverage; new connections initially import 90 days. Self-service password recovery and email verification require configured SMTP delivery; their live email/browser acceptance remains unverified.
 
 AI reports require server-side configuration and adequate sales evidence. Contact submissions are persisted to the operator inbox; they do not send email notifications. Do not describe these integrations as production-verified until the staging acceptance checks pass.

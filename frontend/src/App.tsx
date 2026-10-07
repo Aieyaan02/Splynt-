@@ -1,3 +1,5 @@
+import { RecoveryPage } from "./components/RecoveryPage";
+import { recoveryRoute } from "./lib/recoveryRoute";
 import { useEffect, useState } from "react";
 
 import { ContactInbox } from "./components/ContactInbox";
@@ -38,7 +40,7 @@ export default function App() {
             setSessionError(false);
             setCheckingSession(false);
             setSessionExpired(true);
-            window.location.hash = "/login";
+            if (!recoveryRoute(window.location.hash.slice(1))) window.location.hash = "/login";
         };
         window.addEventListener(SESSION_EXPIRED_EVENT, expired);
         return () => window.removeEventListener(SESSION_EXPIRED_EVENT, expired);
@@ -79,6 +81,12 @@ export default function App() {
             cancelled = true;
         };
     }, [restoreAttempt]);
+
+    const recovery = recoveryRoute(route);
+    if (recovery) return <RecoveryPage key={route} path={recovery.path} token={recovery.token}
+        initialEmail={account?.email ?? ""}
+        onPasswordReset={() => { clearAccessToken(); setAccount(null); setSessionError(false); setSessionExpired(false); }}
+        onVerified={() => setRestoreAttempt(value => value + 1)} />;
 
     if (route === "/" || route === "/product" || route === "/contact") {
         return <LandingPage signedIn={!!account} route={route} />;

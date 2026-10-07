@@ -65,3 +65,15 @@ test('malformed unauthorized response still reports 401 and expires once', async
     assert.equal(getAccessToken(), null);
     assert.equal(events, 1);
 });
+
+test('recovery uses public requests without sending or clearing a stored login', async () => {
+    const { recoveryApi } = await import('../src/lib/api.ts');
+    setAccessToken('old-login');
+    globalThis.fetch = async (_path, options) => {
+        assert.equal(options.headers.has('Authorization'), false);
+        return new Response(null, { status: 204 });
+    };
+    await recoveryApi.reset('a'.repeat(43), 'new-password');
+    await recoveryApi.verify('a'.repeat(43));
+    assert.equal(getAccessToken(), 'old-login'); // UI clears it only after a successful password reset.
+});

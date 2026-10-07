@@ -233,3 +233,7 @@ Added V20 email-action jobs and optional SMTP delivery. Queue records contain ac
 ### Public recovery API and shared request limits
 
 Added email-request/status and token-confirmation endpoints with input validation, no account-existence distinction in accepted responses, explicit unavailable delivery, and shared database admission limits (three/address/hour across purposes; twenty/minute globally). V21 seeds the cross-replica guard and request ledger. HTTP tests cover queued-email reset/new login/old-session rejection, verification, invalid input, disabled delivery, response parity and concurrent/global limits. Browser pages, cleanup and live transport acceptance remain pending.
+
+### Recovery and verification screens
+
+Added request/reset/verification pages, sign-in recovery link and unverified-account navigation. Forms expose delivery availability, generic request confirmation, password validation, explicit verification and retry paths. Link tokens are captured from fragments, removed from the visible URL and kept only in memory. Existing-session expiry no longer redirects away from recovery; successful reset clears local auth and verification refreshes account state. Fifteen frontend tests, lint and build pass. Browser and real SMTP acceptance remain unverified; no real email was sent.

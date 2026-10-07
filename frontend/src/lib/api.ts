@@ -323,3 +323,17 @@ export const adviceApi = {
     read(storeId: number): Promise<AdviceView> { return request(`/api/stores/${storeId}/advice`); },
     generate(storeId: number): Promise<AdviceView> { return request(`/api/stores/${storeId}/advice`, { method: "POST" }); }
 };
+
+export const recoveryApi = {
+    status(): Promise<{ available: boolean }> { return request("/api/auth/recovery/status", {}, false); },
+    requestEmail(email: string, purpose: "reset" | "verify"): Promise<{ message: string }> {
+        const action = purpose === "reset" ? "password-reset" : "email-verification";
+        return request(`/api/auth/${action}/request`, { method: "POST", body: JSON.stringify({ email }) }, false);
+    },
+    reset(token: string, password: string): Promise<void> {
+        return request("/api/auth/password-reset/confirm", { method: "POST", body: JSON.stringify({ token, password }) }, false);
+    },
+    verify(token: string): Promise<void> {
+        return request("/api/auth/email-verification/confirm", { method: "POST", body: JSON.stringify({ token }) }, false);
+    }
+};

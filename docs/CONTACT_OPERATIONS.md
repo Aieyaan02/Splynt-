@@ -7,7 +7,7 @@ The private inbox is at `/#/inquiries` and the paginated API is `/api/operations
 - Enabled account with verified email ownership.
 - Exact email allowlisted in the staging/production service's `SPLYNT_CONTACT_OPERATOR_EMAILS` environment variable (comma-separated).
 
-The default allowlist is empty. Store owners are not platform operators and cannot read other retailers' inquiries. Never grant access merely because an account registered with an operator email: email ownership must be independently verified. Until the email-verification workflow is delivered, the deployment operator must establish ownership out of band before marking their own account verified in the database. Do not mark arbitrary customer accounts verified.
+The default allowlist is empty. Store owners are not platform operators and cannot read other retailers' inquiries. Never grant access merely because an account registered with an operator email: email ownership must be independently verified. With SMTP configured, the operator can use the workspace’s Verify email flow to establish ownership. If delivery is not configured, the deployment operator must establish ownership out of band before marking their own account verified in the database. Do not mark arbitrary customer accounts verified.
 
 Operators can read and reply using their email client from the inbox. There is no automatic email notification yet; operators should check the inbox. Automated notifications and configurable retention are follow-up operational improvements. The contact email request to the project owner is still pending.
 

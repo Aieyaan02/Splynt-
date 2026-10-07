@@ -289,6 +289,7 @@ export function AuthPage({
                                 />
                             </label>
 
+                            <a href="#/forgot-password">Forgot your password?</a>
                             <button
                                 className="button primary wide"
                                 type="submit"

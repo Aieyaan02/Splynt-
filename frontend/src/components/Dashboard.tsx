@@ -366,6 +366,7 @@ export function Dashboard({
                                 </span>
                             )}
                         </button>
+                    {!account.emailVerified && <a className="navigation-item" href="#/verify-email"><span>✉</span> Verify email</a>}
                     <button className="navigation-item" type="button" onClick={() => setPasswordDialogOpen(true)}>
                         <span>⚙</span> Change password
                     </button>
