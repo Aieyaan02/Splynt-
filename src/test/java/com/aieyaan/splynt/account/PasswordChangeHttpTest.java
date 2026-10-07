@@ -78,6 +78,39 @@ class PasswordChangeHttpTest {
         mvc.perform(get("/api/me").header("Authorization", "Bearer " + otherToken)).andExpect(status().isOk());
     }
 
+    @Test void concurrentPasswordChangesAllowOnlyOneWinner() throws Exception {
+        var start = new java.util.concurrent.CountDownLatch(1);
+        try (var pool = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            java.util.concurrent.Callable<Integer> change = () -> {
+                assertTrue(start.await(5, java.util.concurrent.TimeUnit.SECONDS));
+                return mvc.perform(post("/api/me/password").header("Authorization", "Bearer " + token)
+                        .contentType("application/json").content(body("old-password-123", "new-password-456")))
+                        .andReturn().getResponse().getStatus();
+            };
+            var first = pool.submit(change);
+            var second = pool.submit(change);
+            start.countDown();
+            int a = first.get(15, java.util.concurrent.TimeUnit.SECONDS);
+            int b = second.get(15, java.util.concurrent.TimeUnit.SECONDS);
+            assertTrue((a == 204 && (b == 401 || b == 403)) || (b == 204 && (a == 401 || a == 403)),
+                    "One request must succeed and the stale session must be denied: " + a + ", " + b);
+        }
+        assertEquals(1, users.findById(user.getId()).orElseThrow().getCredentialVersion());
+    }
+
+    @Test void staleAccountUpdateCannotRestoreTheOldPassword() throws Exception {
+        var stale = users.findById(user.getId()).orElseThrow();
+        mvc.perform(post("/api/me/password").header("Authorization", "Bearer " + token)
+                .contentType("application/json").content(body("old-password-123", "new-password-456")))
+                .andExpect(status().isNoContent());
+        stale.recordSuccessfulLogin();
+        assertThrows(org.springframework.dao.OptimisticLockingFailureException.class, () -> users.saveAndFlush(stale));
+        var current = users.findById(user.getId()).orElseThrow();
+        assertTrue(encoder.matches("new-password-456", current.getPasswordHash()));
+        assertFalse(encoder.matches("old-password-123", current.getPasswordHash()));
+        assertEquals(1, current.getCredentialVersion());
+    }
+
     @Test void anonymousRequestsCannotChangePassword() throws Exception {
         mvc.perform(post("/api/me/password").contentType("application/json")
                 .content(body("old-password-123", "new-password-456"))).andExpect(status().isUnauthorized());

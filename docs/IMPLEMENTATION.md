@@ -217,3 +217,7 @@ Signup and login now validate the password encoder's 72-byte UTF-8 limit before 
 ### Authenticated password changes and session invalidation
 
 Added a current-password-protected account endpoint and workspace dialog. V18 adds credential and optimistic account versions. JWT checks reject older credentials after a change and disabled/deleted accounts; legacy signed tokens map to version zero until a change. The transaction locks/rechecks the account before changing it. HTTP tests exercise real signed-token rejection, new/old login behavior, validation, anonymous denial, legacy compatibility and other-user isolation. See ACCOUNT_SECURITY.md for deployment and in-flight-request limitations. Forgotten-password recovery/email verification remain outstanding.
+
+### Password-change concurrency acceptance
+
+PostgreSQL HTTP tests now start two real signed-token password-change requests together. Exactly one succeeds; the other is denied, and the credential version increments once. A separate stale-entity test proves a delayed login/account update cannot write the old password back after a successful change. All six password-change HTTP cases pass on PostgreSQL with Flyway and schema validation. These checks verify concurrency behavior, not browser UX or forgotten-password delivery.
