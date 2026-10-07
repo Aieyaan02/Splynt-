@@ -55,6 +55,10 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/public/inquiries",
+                                "/api/auth/password-reset/request",
+                                "/api/auth/password-reset/confirm",
+                                "/api/auth/email-verification/request",
+                                "/api/auth/email-verification/confirm",
                                 "/api/auth/register",
                                 "/api/auth/login"
                         )
@@ -66,6 +70,7 @@ public class SecurityConfig {
                          */
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/api/auth/recovery/status",
                                 "/api/integrations/clover/connect"
                         )
                         .permitAll()

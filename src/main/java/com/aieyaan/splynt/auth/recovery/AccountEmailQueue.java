@@ -15,7 +15,8 @@ public class AccountEmailQueue {
     }
     @Transactional
     public void enqueue(Long userId, AccountActionToken.Purpose purpose) {
-        var user = users.findLockedById(userId).filter(AppUser::isEnabled).orElseThrow();
+        var user = users.findLockedById(userId).filter(AppUser::isEnabled).orElse(null);
+        if (user == null) return;
         if (jobs.findFirstByUserIdAndPurposeAndStateOrderByIdDesc(userId, purpose, "PENDING").isEmpty())
             jobs.saveAndFlush(new AccountEmailJob(user, purpose));
     }

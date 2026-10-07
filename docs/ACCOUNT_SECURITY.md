@@ -34,3 +34,16 @@ Sending defaults to disabled. Configuration, when a staging SMTP provider is rea
 Authentication and required STARTTLS are enabled, with 5-second connect and 10-second read/write timeouts. Use a provider compatible with this transport configuration; do not disable certificate verification. Links place their token in the URL fragment so it is not included in the initial HTTP request. Public issue/redeem APIs, request throttling, recovery pages, retention cleanup and operational delivery acceptance remain pending. Tests substitute a fake sender; no real mail was sent.
 
 SMTP configuration follows [Spring Boot's email documentation](https://docs.spring.io/spring-boot/reference/io/email.html).
+
+## Public recovery API
+
+The following endpoints are now implemented; recovery browser pages remain pending:
+
+- `GET /api/auth/recovery/status` reports whether email delivery is configured.
+- `POST /api/auth/password-reset/request` and `/api/auth/email-verification/request` accept `{ "email": "..." }` and return the same 202 message for eligible, unknown, disabled, already-verified or throttled addresses. No raw token is returned. Disabled delivery returns 503 without queuing.
+- `POST /api/auth/password-reset/confirm` accepts `{ "token": "...", "password": "..." }`.
+- `POST /api/auth/email-verification/confirm` accepts `{ "token": "..." }`.
+
+Confirmation uses POST, validates input and consumes the token atomically. It does not require an existing login. A configured delivery provider is needed to request a new email; existing valid links can still be redeemed during a delivery outage.
+
+V21 adds a shared database guard and request ledger. Requests are limited to three per normalized email per hour across both purposes, and twenty accepted requests per minute globally, including unknown addresses. A pessimistic database lock serializes admission across replicas. Ledger entries store an email hash, not the submitted address, and expire after an hour during subsequent requests. Rate-limited requests have the same response as other eligible-shaped requests; no guarantee of constant response timing is made. Edge request limits are still appropriate for high-volume abuse because application requests reach the database. Internal queue rows and expired action-token retention cleanup remain pending.

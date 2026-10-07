@@ -229,3 +229,7 @@ Added V19 and internal account-action issuance/redemption with 256-bit random to
 ### Durable account-email delivery foundation
 
 Added V20 email-action jobs and optional SMTP delivery. Queue records contain account/purpose snapshots rather than raw tokens; a transactional worker issues a token and records SMTP acceptance. Failure rolls back issuance and retries with bounded backoff; stale credentials/old jobs are cancelled. Trusted HTTPS origins and explicit sender configuration are validated, STARTTLS/authentication and network timeouts configured, sending disabled by default. Seven fake-sender/queue tests cover success, deduplication, retry rollback/backoff, cancellation, limits and link configuration. Public recovery API/UI, throttling, cleanup and real transport acceptance are still pending.
+
+### Public recovery API and shared request limits
+
+Added email-request/status and token-confirmation endpoints with input validation, no account-existence distinction in accepted responses, explicit unavailable delivery, and shared database admission limits (three/address/hour across purposes; twenty/minute globally). V21 seeds the cross-replica guard and request ledger. HTTP tests cover queued-email reset/new login/old-session rejection, verification, invalid input, disabled delivery, response parity and concurrent/global limits. Browser pages, cleanup and live transport acceptance remain pending.
