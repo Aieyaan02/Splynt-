@@ -58,7 +58,7 @@ class ProductRepositoryTest {
                 "Orange Juice",
                 result.get().getName()
         );
-        assertEquals(10, result.get().getQuantity());
+        assertEquals(10, result.get().getQuantity().intValueExact());
         assertEquals(
                 store.getId(),
                 result.get().getStoreId()

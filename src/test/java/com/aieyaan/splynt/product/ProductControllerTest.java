@@ -77,22 +77,22 @@ class ProductControllerTest {
                 "Orange Juice",
                 "Example Brand",
                 "Beverages",
-                10,
-                5,
-                20,
+                BigDecimal.valueOf(10),
+                BigDecimal.valueOf(5),
+                BigDecimal.valueOf(20),
                 new BigDecimal("2.50"),
                 null,
                 ProductSource.MANUAL,
                 true,
                 false,
-                10,
+                BigDecimal.valueOf(10),
                 OffsetDateTime.parse(
                         "2026-09-20T17:00:00-04:00"
                 ),
                 OffsetDateTime.parse(
                         "2026-09-20T17:00:00-04:00"
                 ),
-                null
+                null, true
         );
 
         when(productService.createProduct(

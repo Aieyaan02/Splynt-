@@ -116,7 +116,7 @@ export function Dashboard({
         const term = search.toLowerCase().trim();
         return (!term || [product.name, product.barcode, product.brand, product.category, product.cloverDetails?.sku, product.cloverDetails?.alternateName, ...(product.cloverDetails?.categories ?? [])]
             .some(value => value?.toLowerCase().includes(term)))
-            && (stockFilter === "all" || (stockFilter === "low" ? product.lowStock : product.quantity === 0))
+            && (stockFilter === "all" || (stockFilter === "low" ? product.lowStock : (stockFilter === "unknown" ? !product.stockKnown : product.quantity !== null && (product.quantity ?? 0) <= 0)))
             && (!categoryFilter || product.category === categoryFilter || product.cloverDetails?.categories?.includes(categoryFilter));
     });
     const categories = [...new Set(products.flatMap(product => [product.category, ...(product.cloverDetails?.categories ?? [])]).filter(Boolean))] as string[];
@@ -190,15 +190,13 @@ export function Dashboard({
         void loadInventory();
     }, [selectedStoreId, loadInventory]);
 
-    const totalUnits = products.reduce(
-        (sum, product) => sum + product.quantity,
-        0
-    );
+    const stockedProducts = products.filter(product => product.stockKnown && product.quantity !== null && product.quantity > 0).length;
+    const unknownStock = products.filter(product => !product.stockKnown).length;
 
     const inventoryValue = products.reduce(
         (sum, product) =>
             sum
-            + product.quantity * (product.unitCost ?? 0),
+            + Math.max(0, product.quantity ?? 0) * (product.unitCost ?? 0),
         0
     );
 
@@ -468,6 +466,7 @@ export function Dashboard({
                     </div>
                 )}
 
+                {unknownStock > 0 && <p className="message error-message" role="status">Stock is unknown for {unknownStock} products. They are excluded from low-stock alerts and inventory value. Check stock tracking in Clover and sync again.</p>}
                 <section className="statistics-grid">
                     <StatCard
                         label="Total products"
@@ -485,9 +484,9 @@ export function Dashboard({
                     />
 
                     <StatCard
-                        label="Inventory units"
-                        value={totalUnits.toLocaleString()}
-                        description="Across active products"
+                        label="Products in stock"
+                        value={stockedProducts.toLocaleString()}
+                        description={unknownStock ? `${unknownStock} products have unknown stock` : "Known positive balances"}
                     />
 
                     <StatCard
@@ -496,7 +495,7 @@ export function Dashboard({
                             inventoryValue,
                             selectedStore?.currencyCode
                         )}
-                        description={products.some(product => product.unitCost === null) ? "Partial value · some costs are missing" : "Based on unit cost"}
+                        description={products.some(product => product.unitCost === null || !product.stockKnown || (product.quantity ?? 0) < 0) ? "Partial value · missing costs, unknown or negative stock" : "Based on unit cost"}
                     />
                 </section>
 
@@ -530,16 +529,15 @@ export function Dashboard({
                     ) : lowStockProducts.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-icon">
-                                ✓
+                                {unknownStock ? "?" : "✓"}
                             </div>
 
                             <h3>
-                                Stock levels look healthy
+                                {unknownStock ? "Some stock levels are unknown" : "Known stock levels look healthy"}
                             </h3>
 
                             <p>
-                                No products currently require
-                                reordering.
+                                {unknownStock ? "Resolve unknown stock before deciding whether every product is sufficiently stocked." : "No products with known stock currently meet their reorder thresholds."}
                             </p>
                         </div>
                     ) : (
@@ -561,7 +559,7 @@ export function Dashboard({
                                     <div className="stock-values">
                                         <div>
                                             <strong>
-                                                {product.quantity}
+                                                {product.quantity ?? "Unknown"}
                                             </strong>
 
                                             <span>
@@ -605,7 +603,7 @@ export function Dashboard({
 
                     <div className="catalog-toolbar">
                         <label className="catalog-search"><span>Search products</span><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search name, barcode, or brand…" /></label>
-                        <label><span>Stock status</span><select value={stockFilter} onChange={event => setStockFilter(event.target.value)}><option value="all">All stock levels</option><option value="low">Low stock</option><option value="out">Out of stock</option></select></label>
+                        <label><span>Stock status</span><select value={stockFilter} onChange={event => setStockFilter(event.target.value)}><option value="all">All stock levels</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="unknown">Unknown stock</option></select></label>
                         <label><span>Category</span><select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)}><option value="">All categories</option>{categories.sort().map(category => <option key={category}>{category}</option>)}</select></label>
                     </div>
                     {products.length > 0 && <p className="catalog-count" aria-live="polite">Showing {visibleProducts.length} of {products.length} products</p>}
@@ -662,7 +660,7 @@ export function Dashboard({
                                             </td>
 
                                             <td>
-                                                {product.quantity}
+                                                {product.quantity ?? "Unknown"}
                                             </td>
 
                                             <td>
@@ -686,12 +684,12 @@ export function Dashboard({
                                             <td>
                                                 <span
                                                     className={
-                                                        product.lowStock
+                                                        !product.stockKnown ? "stock-status unknown" : product.lowStock
                                                             ? "stock-status low"
                                                             : "stock-status healthy"
                                                     }
                                                 >
-                                                    {product.lowStock
+                                                    {!product.stockKnown ? "Unknown stock" : product.lowStock
                                                         ? "Low stock"
                                                         : "Healthy"}
                                                 </span>
@@ -703,7 +701,7 @@ export function Dashboard({
                                                         className="button secondary compact"
                                                         type="button"
                                                         disabled={
-                                                            product.source === "CLOVER" || product.quantity <= 0
+                                                            product.source === "CLOVER" || (product.quantity ?? 0) <= 0
                                                         }
                                                         title={product.source === "CLOVER" ? "Manage stock in Clover, then sync Splynt" : undefined}
                                                         onClick={() =>
@@ -793,7 +791,7 @@ export function Dashboard({
                     ) : archivedProducts.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-icon">
-                                ✓
+                                {unknownStock ? "?" : "✓"}
                             </div>
 
                             <h3>No archived products</h3>
@@ -835,7 +833,7 @@ export function Dashboard({
                                             </td>
 
                                             <td>
-                                                {product.quantity}
+                                                {product.quantity ?? "Unknown"}
                                             </td>
 
                                             <td>

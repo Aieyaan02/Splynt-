@@ -70,7 +70,7 @@ class InventoryMovementRepositoryTest {
 
         assertEquals(
                 5,
-                results.getFirst().getQuantityChange()
+                results.getFirst().getQuantityChange().intValueExact()
         );
 
         assertEquals(

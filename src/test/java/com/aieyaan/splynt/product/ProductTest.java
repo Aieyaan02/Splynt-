@@ -31,7 +31,7 @@ class ProductTest {
     void recordSaleReducesInventory() {
         product.recordSale(3);
 
-        assertEquals(7, product.getQuantity());
+        assertEquals(7, product.getQuantity().intValueExact());
     }
 
     @Test
@@ -49,7 +49,7 @@ class ProductTest {
     void restockIncreasesInventory() {
         product.restock(8);
 
-        assertEquals(18, product.getQuantity());
+        assertEquals(18, product.getQuantity().intValueExact());
     }
 
     @Test
@@ -57,6 +57,6 @@ class ProductTest {
         product.recordSale(7);
 
         assertTrue(product.isLowStock());
-        assertEquals(17, product.calculateBaseReorderQuantity());
+        assertEquals(17, product.calculateBaseReorderQuantity().intValueExact());
     }
 }

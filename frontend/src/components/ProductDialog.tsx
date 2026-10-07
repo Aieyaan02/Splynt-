@@ -61,13 +61,13 @@ export function ProductDialog({
         setValidationErrors({});
 
         const parsedQuantity =
-            parseNonNegativeInteger(quantity);
+            parseNonNegativeQuantity(quantity);
 
         const parsedReorderLevel =
-            parseNonNegativeInteger(reorderLevel);
+            parseNonNegativeQuantity(reorderLevel);
 
         const parsedTargetStock =
-            parseNonNegativeInteger(targetStock);
+            parseNonNegativeQuantity(targetStock);
 
         const parsedUnitCost =
             unitCost.trim() === ""
@@ -78,17 +78,17 @@ export function ProductDialog({
 
         if (parsedQuantity === null) {
             fieldErrors.quantity =
-                "Starting quantity must be a whole number of zero or greater";
+                "Starting quantity must be a number (up to six decimal places) of zero or greater";
         }
 
         if (parsedReorderLevel === null) {
             fieldErrors.reorderLevel =
-                "Reorder level must be a whole number of zero or greater";
+                "Reorder level must be a number (up to six decimal places) of zero or greater";
         }
 
         if (parsedTargetStock === null) {
             fieldErrors.targetStock =
-                "Target stock must be a whole number of zero or greater";
+                "Target stock must be a number (up to six decimal places) of zero or greater";
         }
 
         if (
@@ -272,7 +272,7 @@ export function ProductDialog({
                         <input
                             type="number"
                             min="0"
-                            step="1"
+                            step="0.000001"
                             inputMode="numeric"
                             value={quantity}
                             onFocus={event =>
@@ -299,7 +299,7 @@ export function ProductDialog({
                         <input
                             type="number"
                             min="0"
-                            step="1"
+                            step="0.000001"
                             inputMode="numeric"
                             value={reorderLevel}
                             onFocus={event =>
@@ -328,7 +328,7 @@ export function ProductDialog({
                         <input
                             type="number"
                             min="0"
-                            step="1"
+                            step="0.000001"
                             inputMode="numeric"
                             value={targetStock}
                             onFocus={event =>
@@ -414,7 +414,7 @@ function normalizeWholeNumberInput(
     return value.replace(/^0+(?=\d)/, "");
 }
 
-function parseNonNegativeInteger(
+function parseNonNegativeQuantity(
     value: string
 ): number | null {
     if (value.trim() === "") {
@@ -424,7 +424,7 @@ function parseNonNegativeInteger(
     const parsedValue = Number(value);
 
     if (
-        !Number.isInteger(parsedValue)
+        !Number.isFinite(parsedValue) || !/^\d+(?:\.\d{1,6})?$/.test(value.trim()) || parsedValue >= 1_000_000_000_000
         || parsedValue < 0
     ) {
         return null;

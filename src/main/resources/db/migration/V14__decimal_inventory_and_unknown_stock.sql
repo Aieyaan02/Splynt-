@@ -1,0 +1,13 @@
+ALTER TABLE products ALTER COLUMN quantity TYPE NUMERIC(18, 6);
+ALTER TABLE products ALTER COLUMN reorder_level TYPE NUMERIC(18, 6);
+ALTER TABLE products ALTER COLUMN target_stock TYPE NUMERIC(18, 6);
+ALTER TABLE products ADD COLUMN stock_known BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE products DROP CONSTRAINT chk_products_quantity;
+ALTER TABLE products ADD CONSTRAINT chk_products_quantity CHECK (quantity >= 0 OR source = 'CLOVER');
+ALTER TABLE inventory_movements ALTER COLUMN quantity_change TYPE NUMERIC(19, 6);
+ALTER TABLE inventory_movements ALTER COLUMN quantity_before TYPE NUMERIC(18, 6);
+ALTER TABLE inventory_movements ALTER COLUMN quantity_after TYPE NUMERIC(18, 6);
+ALTER TABLE inventory_movements DROP CONSTRAINT chk_inventory_movement_before;
+ALTER TABLE inventory_movements DROP CONSTRAINT chk_inventory_movement_after;
+ALTER TABLE inventory_movements ADD CONSTRAINT chk_inventory_movement_before CHECK (quantity_before >= 0 OR (source = 'CLOVER' AND movement_type = 'ADJUSTMENT'));
+ALTER TABLE inventory_movements ADD CONSTRAINT chk_inventory_movement_after CHECK (quantity_after >= 0 OR (source = 'CLOVER' AND movement_type = 'ADJUSTMENT'));

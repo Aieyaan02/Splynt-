@@ -14,18 +14,18 @@ public record ProductResponse(
         String name,
         String brand,
         String category,
-        int quantity,
-        int reorderLevel,
-        int targetStock,
+        BigDecimal quantity,
+        BigDecimal reorderLevel,
+        BigDecimal targetStock,
         BigDecimal unitCost,
         String cloverItemId,
         ProductSource source,
         boolean active,
         boolean lowStock,
-        int suggestedReorderQuantity,
+        BigDecimal suggestedReorderQuantity,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
-        com.aieyaan.splynt.product.CloverCatalogDetails cloverDetails) {
+        com.aieyaan.splynt.product.CloverCatalogDetails cloverDetails, boolean stockKnown) {
 
     public static ProductResponse from(Product product) {
         return new ProductResponse(
@@ -36,7 +36,7 @@ public record ProductResponse(
                 product.getName(),
                 product.getBrand(),
                 product.getCategory(),
-                product.getQuantity(),
+                product.isStockKnown() ? product.getQuantity() : null,
                 product.getReorderLevel(),
                 product.getTargetStock(),
                 product.getUnitCost(),
@@ -47,7 +47,7 @@ public record ProductResponse(
                 product.calculateBaseReorderQuantity(),
                 product.getCreatedAt(),
                 product.getUpdatedAt(),
-                product.getCloverDetails()
+                product.getCloverDetails(), product.isStockKnown()
         );
     }
 }

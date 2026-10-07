@@ -30,9 +30,9 @@ class InventoryMovementTest {
                 InventoryMovementType.SALE,
                 movement.getMovementType());
 
-        assertEquals(-3, movement.getQuantityChange());
-        assertEquals(10, movement.getQuantityBefore());
-        assertEquals(7, movement.getQuantityAfter());
+        assertEquals(-3, movement.getQuantityChange().intValueExact());
+        assertEquals(10, movement.getQuantityBefore().intValueExact());
+        assertEquals(7, movement.getQuantityAfter().intValueExact());
         assertEquals("Customer purchase", movement.getNote());
     }
 

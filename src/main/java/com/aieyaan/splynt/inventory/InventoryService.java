@@ -40,14 +40,14 @@ public class InventoryService {
 
         if (product.getSource() == com.aieyaan.splynt.product.ProductSource.CLOVER)
             throw new IllegalArgumentException("Manage Clover stock in Clover, then sync Splynt. This prevents changes being overwritten.");
-        int quantityBefore = product.getQuantity();
+        java.math.BigDecimal quantityBefore = product.getQuantity();
 
         product.recordSale(request.quantity());
 
         InventoryMovement movement = new InventoryMovement(
                 product,
                 InventoryMovementType.SALE,
-                -request.quantity(),
+                request.quantity().negate(),
                 quantityBefore,
                 product.getQuantity(),
                 InventoryMovementSource.MANUAL,
@@ -79,7 +79,7 @@ public class InventoryService {
 
         if (product.getSource() == com.aieyaan.splynt.product.ProductSource.CLOVER)
             throw new IllegalArgumentException("Manage Clover stock in Clover, then sync Splynt. This prevents changes being overwritten.");
-        int quantityBefore = product.getQuantity();
+        java.math.BigDecimal quantityBefore = product.getQuantity();
 
         product.restock(request.quantity());
 

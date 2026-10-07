@@ -102,3 +102,4 @@ th { font-weight:500; font-size:9px; background:#f6f8f1; }td { font-size:12px; p
 .advice-evidence dt{font-weight:650;margin-top:10px}.advice-evidence dd{margin:3px 0 0;line-height:1.65}.advice-evidence>div:first-child dt{margin-top:0}
 .historical-sales{margin-top:28px;border-top:1px solid #dce4db;padding-top:20px}.historical-sales caption{text-align:left;padding:12px 0;color:#627168;font-size:.82rem}.advice-grid .historical-sales{min-width:0}.advice-grid .historical-sales table{font-size:.75rem}
 .catalog-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:16px 0}.catalog-details dt{font-size:.78rem;color:#627168}.catalog-details dd{margin:4px 0 0;font-weight:600;overflow-wrap:anywhere}
+.stock-status.unknown{background:#eef0ed;color:#5b665e}

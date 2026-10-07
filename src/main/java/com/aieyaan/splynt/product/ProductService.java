@@ -91,7 +91,7 @@ public class ProductService {
         Product product = getActiveProduct(storeId, productId);
         if (product.getVersion() != request.version())
             throw new org.springframework.dao.OptimisticLockingFailureException("Product changed since it was opened");
-        if (request.targetStock() < request.reorderLevel())
+        if (request.targetStock().compareTo(request.reorderLevel()) < 0)
             throw new IllegalArgumentException("Target stock cannot be lower than the reorder level");
         // Clover owns imported catalog identity; local stock targets/costs belong to the retailer.
         if (product.getSource() != ProductSource.CLOVER) {
@@ -244,7 +244,7 @@ public class ProductService {
     private void validateInventoryLevels(
             CreateProductRequest request) {
 
-        if (request.targetStock() < request.reorderLevel()) {
+        if (request.targetStock().compareTo(request.reorderLevel()) < 0) {
             throw new IllegalArgumentException(
                     "Target stock cannot be lower than the reorder level"
             );

@@ -101,7 +101,8 @@ export interface Product {
     name: string;
     brand: string | null;
     category: string | null;
-    quantity: number;
+    quantity: number | null;
+    stockKnown: boolean;
     reorderLevel: number;
     targetStock: number;
     unitCost: number | null;

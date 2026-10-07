@@ -27,19 +27,22 @@ public record CreateProductRequest(
 
         @NotNull(message = "Quantity is required")
         @PositiveOrZero(message = "Quantity cannot be negative")
-        Integer quantity,
+        @jakarta.validation.constraints.Digits(integer = 12, fraction = 6) BigDecimal quantity,
 
         @NotNull(message = "Reorder level is required")
         @PositiveOrZero(message = "Reorder level cannot be negative")
-        Integer reorderLevel,
+        @jakarta.validation.constraints.Digits(integer = 12, fraction = 6) BigDecimal reorderLevel,
 
         @NotNull(message = "Target stock is required")
         @Positive(message = "Target stock must be greater than zero")
-        Integer targetStock,
+        @jakarta.validation.constraints.Digits(integer = 12, fraction = 6) BigDecimal targetStock,
 
         @DecimalMin(
                 value = "0.0",
                 inclusive = true,
                 message = "Unit cost cannot be negative")
         BigDecimal unitCost) {
+    public CreateProductRequest(String barcode, String name, String brand, String category, int quantity, int reorder, int target, BigDecimal cost) {
+        this(barcode, name, brand, category, BigDecimal.valueOf(quantity), BigDecimal.valueOf(reorder), BigDecimal.valueOf(target), cost);
+    }
 }

@@ -1,6 +1,7 @@
 package com.aieyaan.splynt.clover;
 
 import java.util.HashMap;
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
 
@@ -53,7 +54,7 @@ public class CloverInventorySyncService {
         JsonNode itemsResponse = cloverClient.getItems(storeId);
         JsonNode stocksResponse = cloverClient.getItemStocks(storeId);
 
-        Map<String, Integer> quantities =
+        Map<String, BigDecimal> quantities =
                 extractStockQuantities(stocksResponse);
 
         int received = 0;
@@ -94,12 +95,7 @@ public class CloverInventorySyncService {
             if (barcode.length() > 64) { skipped++; continue; }
 
             // An absent stock record is unknown, never evidence of zero stock.
-            Integer quantity = quantities.get(cloverItemId);
-            if (quantity == null) {
-                skipped++;
-                continue;
-            }
-
+            BigDecimal quantity = quantities.get(cloverItemId);
             Optional<Product> existingProduct =
                     productRepository.findByStoreIdAndCloverItemId(
                             storeId,
@@ -120,6 +116,7 @@ public class CloverInventorySyncService {
                     skipped++;
                     continue;
                 }
+                if (quantity == null) skipped++;
                 updateExistingProduct(
                         existingProduct.get(),
                         cloverItemId,
@@ -133,24 +130,26 @@ public class CloverInventorySyncService {
                 continue;
             }
 
+            if (quantity == null) skipped++;
             Product product = new Product(
                     store,
                     barcode,
                     name,
                     null,
                     "Clover",
-                    quantity,
-                    DEFAULT_REORDER_LEVEL,
-                    Math.max(DEFAULT_TARGET_STOCK, quantity),
+                    quantity == null ? BigDecimal.ZERO : quantity,
+                    BigDecimal.valueOf(DEFAULT_REORDER_LEVEL),
+                    quantity == null ? BigDecimal.valueOf(DEFAULT_TARGET_STOCK) : BigDecimal.valueOf(DEFAULT_TARGET_STOCK).max(quantity),
                     null,
                     ProductSource.CLOVER
             );
 
+            if (quantity == null) product.markStockUnknown();
             product.setCloverItemId(cloverItemId);
             applyCatalogDetails(product, itemNode);
             productRepository.save(product);
-            if (quantity > 0) {
-                recordReconciliation(product, 0, quantity);
+            if (quantity != null && quantity.signum() != 0) {
+                recordReconciliation(product, BigDecimal.ZERO, quantity, true);
             }
             created++;
         }
@@ -165,10 +164,10 @@ public class CloverInventorySyncService {
         );
     }
 
-    private Map<String, Integer> extractStockQuantities(
+    private Map<String, BigDecimal> extractStockQuantities(
             JsonNode stocksResponse) {
 
-        Map<String, Integer> quantities = new HashMap<>();
+        Map<String, BigDecimal> quantities = new HashMap<>();
         JsonNode stocks = stocksResponse.path("elements");
 
         if (!stocks.isArray()) {
@@ -189,13 +188,10 @@ public class CloverInventorySyncService {
             if (value == null || !value.isNumber()) {
                 continue;
             }
-            // Whole-unit inventory only: never silently round weighed goods or negative stock.
-            java.math.BigDecimal amount = value.decimalValue();
             try {
-                int quantity = amount.intValueExact();
-                if (quantity >= 0) quantities.put(itemId, quantity);
-            } catch (ArithmeticException unsupportedQuantity) {
-                // Returned in the skipped count for the connection status.
+                quantities.put(itemId, Product.stockAmount(value.decimalValue()));
+            } catch (IllegalArgumentException unsupportedQuantity) {
+                // Preserve the catalog entry while marking stock unknown; never round a provider value.
             }
         }
 
@@ -207,7 +203,7 @@ public class CloverInventorySyncService {
             String cloverItemId,
             String barcode,
             String name,
-            int newQuantity) {
+            BigDecimal newQuantity) {
 
         product.setCloverItemId(cloverItemId);
         product.setBarcode(barcode);
@@ -221,25 +217,20 @@ public class CloverInventorySyncService {
 
     private void synchronizeQuantity(
             Product product,
-            int newQuantity) {
+            BigDecimal newQuantity) {
 
-        int currentQuantity = product.getQuantity();
-        int difference = newQuantity - currentQuantity;
-
-        if (difference > 0) {
-            product.restock(difference);
-        } else if (difference < 0) {
-            product.recordSale(Math.abs(difference));
-        }
-        if (difference != 0) {
-            recordReconciliation(product, currentQuantity, newQuantity);
-        }
+        if (newQuantity == null) { product.markStockUnknown(); return; }
+        BigDecimal currentQuantity = product.getQuantity();
+        boolean wasKnown = product.isStockKnown();
+        product.reconcileStock(newQuantity);
+        if (newQuantity.compareTo(currentQuantity) != 0) recordReconciliation(product, currentQuantity, newQuantity, wasKnown);
     }
 
-    private void recordReconciliation(Product product, int before, int after) {
+    private void recordReconciliation(Product product, BigDecimal before, BigDecimal after, boolean wasKnown) {
         movements.save(new InventoryMovement(product, InventoryMovementType.ADJUSTMENT,
-                after - before, before, after, InventoryMovementSource.CLOVER,
-                "Stock reconciled from Clover", product.getCloverItemId()));
+                after.subtract(before), before, after, InventoryMovementSource.CLOVER,
+                wasKnown ? "Stock reconciled from Clover" : "Stock restored from Clover; prior balance was last known, not current",
+                product.getCloverItemId()));
     }
 
     private void applyCatalogDetails(Product product, JsonNode item) {

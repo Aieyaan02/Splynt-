@@ -1,6 +1,7 @@
 package com.aieyaan.splynt.inventory;
 
 import java.time.OffsetDateTime;
+import java.math.BigDecimal;
 import java.util.Objects;
 
 import com.aieyaan.splynt.product.Product;
@@ -34,14 +35,14 @@ public class InventoryMovement {
     @Column(name = "movement_type", nullable = false, length = 32)
     private InventoryMovementType movementType;
 
-    @Column(name = "quantity_change", nullable = false)
-    private int quantityChange;
+    @Column(name = "quantity_change", nullable = false, precision = 19, scale = 6)
+    private BigDecimal quantityChange;
 
-    @Column(name = "quantity_before", nullable = false)
-    private int quantityBefore;
+    @Column(name = "quantity_before", nullable = false, precision = 18, scale = 6)
+    private BigDecimal quantityBefore;
 
-    @Column(name = "quantity_after", nullable = false)
-    private int quantityAfter;
+    @Column(name = "quantity_after", nullable = false, precision = 18, scale = 6)
+    private BigDecimal quantityAfter;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
@@ -62,9 +63,9 @@ public class InventoryMovement {
     public InventoryMovement(
             Product product,
             InventoryMovementType movementType,
-            int quantityChange,
-            int quantityBefore,
-            int quantityAfter,
+            BigDecimal quantityChange,
+            BigDecimal quantityBefore,
+            BigDecimal quantityAfter,
             InventoryMovementSource source,
             String note,
             String externalReference) {
@@ -87,43 +88,48 @@ public class InventoryMovement {
                 quantityBefore,
                 quantityAfter);
 
-        this.quantityChange = quantityChange;
-        this.quantityBefore = quantityBefore;
-        this.quantityAfter = quantityAfter;
+        this.quantityChange = quantityChange.setScale(6, java.math.RoundingMode.UNNECESSARY);
+        if (this.quantityChange.precision() > 19) throw new IllegalArgumentException("Inventory change is too large");
+        this.quantityBefore = Product.stockAmount(quantityBefore);
+        this.quantityAfter = Product.stockAmount(quantityAfter);
         this.note = normalizeText(note);
         this.externalReference = normalizeText(externalReference);
     }
 
+    public InventoryMovement(Product product, InventoryMovementType type, int change, int before, int after, InventoryMovementSource source, String note, String reference) {
+        this(product, type, BigDecimal.valueOf(change), BigDecimal.valueOf(before), BigDecimal.valueOf(after), source, note, reference);
+    }
+
     private void validateQuantities(
             InventoryMovementType movementType,
-            int quantityChange,
-            int quantityBefore,
-            int quantityAfter) {
+            BigDecimal quantityChange,
+            BigDecimal quantityBefore,
+            BigDecimal quantityAfter) {
 
-        if (quantityChange == 0) {
+        if (quantityChange.signum() == 0) {
             throw new IllegalArgumentException(
                     "Inventory quantity change cannot be zero");
         }
 
-        if (quantityBefore < 0 || quantityAfter < 0) {
+        if ((quantityBefore.signum() < 0 || quantityAfter.signum() < 0) && !(source == InventoryMovementSource.CLOVER && movementType == InventoryMovementType.ADJUSTMENT)) {
             throw new IllegalArgumentException(
                     "Inventory quantities cannot be negative");
         }
 
-        if (quantityAfter != quantityBefore + quantityChange) {
+        if (quantityAfter.compareTo(quantityBefore.add(quantityChange)) != 0) {
             throw new IllegalArgumentException(
                     "Quantity after must equal quantity before plus the change");
         }
 
         if (movementType == InventoryMovementType.SALE
-                && quantityChange >= 0) {
+                && quantityChange.signum() >= 0) {
 
             throw new IllegalArgumentException(
                     "A sale must decrease inventory");
         }
 
         if (movementType == InventoryMovementType.RESTOCK
-                && quantityChange <= 0) {
+                && quantityChange.signum() <= 0) {
 
             throw new IllegalArgumentException(
                     "A restock must increase inventory");
@@ -157,15 +163,15 @@ public class InventoryMovement {
         return movementType;
     }
 
-    public int getQuantityChange() {
+    public BigDecimal getQuantityChange() {
         return quantityChange;
     }
 
-    public int getQuantityBefore() {
+    public BigDecimal getQuantityBefore() {
         return quantityBefore;
     }
 
-    public int getQuantityAfter() {
+    public BigDecimal getQuantityAfter() {
         return quantityAfter;
     }
 

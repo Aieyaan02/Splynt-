@@ -87,6 +87,7 @@ public interface ProductRepository
             FROM Product p
             WHERE p.store.id = :storeId
               AND p.active = true
+              AND p.stockKnown = true
               AND p.quantity <= p.reorderLevel
             ORDER BY p.quantity ASC, p.name ASC
             """)

@@ -68,7 +68,7 @@ class ProductSettingsHttpTest {
         mvc.perform(patch(path() + "/settings").with(jwt().jwt(j -> j.subject(owner.getId().toString())))
                 .contentType("application/json").content(settings(999L, 5, 20)))
                 .andExpect(status().isConflict());
-        assertEquals(2, product.getReorderLevel());
+        assertEquals(2, product.getReorderLevel().intValueExact());
     }
     @Test void rejectsInvalidTargets() throws Exception {
         mvc.perform(patch(path() + "/settings").with(jwt().jwt(j -> j.subject(owner.getId().toString())))
@@ -106,6 +106,6 @@ class ProductSettingsHttpTest {
             mvc.perform(post(path() + "/inventory/" + operation).with(jwt().jwt(j -> j.subject(owner.getId().toString())))
                     .contentType("application/json").content("{\"quantity\":1}"))
                     .andExpect(status().isBadRequest());
-        assertEquals(4, product.getQuantity());
+        assertEquals(4, product.getQuantity().intValueExact());
     }
 }

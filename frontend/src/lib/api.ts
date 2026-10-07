@@ -279,7 +279,7 @@ export interface SalesInsights {
         productComparisons: { productId: number; name: string; month: string; previousMonth: string; units: number; previousUnits: number; orders: number; previousOrders: number; sufficient: boolean; dailyUnitsChangePercent: number | null }[];
     };
     summary: { completeDays: number; orders: number; units: number; sufficientForVelocity: boolean;
-        topProducts: { productId: number; name: string; units: number; unitsPerDay: number | null; estimatedDaysRemaining: number | null; currentStock: number }[];
+        topProducts: { productId: number; name: string; units: number; unitsPerDay: number | null; estimatedDaysRemaining: number | null; currentStock: number | null }[];
         hourlyUnits: number[]; weekdayUnits: number[]; };
 }
 export const insightsApi = {

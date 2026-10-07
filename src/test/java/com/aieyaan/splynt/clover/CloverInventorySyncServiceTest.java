@@ -36,21 +36,24 @@ class CloverInventorySyncServiceTest {
     @Test void reconcilesWithoutInventingSales() {
         stock("3");
         service.synchronize(1L);
-        assertEquals(3, product.getQuantity());
+        assertEquals(3, product.getQuantity().intValueExact());
         ArgumentCaptor<InventoryMovement> captor = ArgumentCaptor.forClass(InventoryMovement.class);
         verify(movements).save(captor.capture());
         assertEquals(InventoryMovementType.ADJUSTMENT, captor.getValue().getMovementType());
         assertEquals(InventoryMovementSource.CLOVER, captor.getValue().getSource());
-        assertEquals(10, captor.getValue().getQuantityBefore());
-        assertEquals(3, captor.getValue().getQuantityAfter());
+        assertEquals(10, captor.getValue().getQuantityBefore().intValueExact());
+        assertEquals(3, captor.getValue().getQuantityAfter().intValueExact());
     }
 
-    @Test void missingStockDoesNotEraseKnownQuantity() {
+    @Test void missingStockMarksBalanceUnknownWithoutInventingAMovement() {
         when(client.getItemStocks(1L)).thenReturn(json.readTree("{\"elements\":[]}"));
         assertEquals(1, service.synchronize(1L).skipped());
-        assertEquals(10, product.getQuantity());
+        assertEquals(10, product.getQuantity().intValueExact());
+        assertFalse(product.isStockKnown());
+        assertFalse(product.isLowStock());
+        assertNull(com.aieyaan.splynt.product.dto.ProductResponse.from(product).quantity());
         verifyNoInteractions(movements);
-        verify(products, never()).save(any());
+        verify(products).save(product);
     }
 
     @Test void malformedStockFailsInsteadOfZeroingCatalog() {
@@ -89,8 +92,8 @@ class CloverInventorySyncServiceTest {
         assertTrue(product.getCloverDetails().hidden());
         assertTrue(product.isActive());
         assertEquals(new java.math.BigDecimal("2.25"), product.getUnitCost());
-        assertEquals(5, product.getReorderLevel());
-        assertEquals(20, product.getTargetStock());
+        assertEquals(5, product.getReorderLevel().intValueExact());
+        assertEquals(20, product.getTargetStock().intValueExact());
         verifyNoInteractions(movements);
     }
 
@@ -102,7 +105,7 @@ class CloverInventorySyncServiceTest {
         assertEquals(1, service.synchronize(1L).skipped());
         assertEquals(ProductSource.MANUAL, product.getSource());
         assertNull(product.getCloverItemId());
-        assertEquals(10, product.getQuantity());
+        assertEquals(10, product.getQuantity().intValueExact());
         verifyNoInteractions(movements);
         verify(products, never()).save(any());
     }
@@ -123,7 +126,7 @@ class CloverInventorySyncServiceTest {
         other.setCloverItemId("otherItem");
         when(products.findByStoreIdAndBarcode(1L, "ABC")).thenReturn(Optional.of(other));
         assertEquals(1, service.synchronize(1L).skipped());
-        assertEquals(10, product.getQuantity()); assertEquals(20, other.getQuantity());
+        assertEquals(10, product.getQuantity().intValueExact()); assertEquals(20, other.getQuantity().intValueExact());
         verifyNoInteractions(movements);
     }
 
@@ -131,17 +134,39 @@ class CloverInventorySyncServiceTest {
         stock("3");
         when(client.getItems(1L)).thenReturn(json.readTree("{\"elements\":[{\"id\":\"item1\",\"name\":\"Water\",\"code\":\"ABC\",\"deletedTime\":123456}]}"));
         assertEquals(1, service.synchronize(1L).skipped());
-        assertEquals(10, product.getQuantity());
+        assertEquals(10, product.getQuantity().intValueExact());
         verifyNoInteractions(movements);
         verify(products, never()).save(any());
     }
 
-    @Test void fractionalAndNegativeStockAreNotSilentlyCoerced() {
-        for (String amount : new String[] {"1.5", "-3", "null", "2147483648"}) {
+    @Test void fractionalAndNegativeStockRemainExact() {
+        for (String amount : new String[] {"1.500001", "-3.25", "2147483648"}) {
+            stock(amount);
+            assertEquals(0, service.synchronize(1L).skipped());
+            assertEquals(0, product.getQuantity().compareTo(new java.math.BigDecimal(amount)));
+            assertTrue(product.isStockKnown());
+        }
+    }
+
+    @Test void invalidPrecisionOrMissingStockBecomesUnknownWithoutRounding() {
+        for (String amount : new String[] {"1.0000001", "1000000000000", "null"}) {
             stock(amount);
             assertEquals(1, service.synchronize(1L).skipped());
+            assertFalse(product.isStockKnown());
         }
-        assertEquals(10, product.getQuantity());
+        assertEquals(10, product.getQuantity().intValueExact());
+        verifyNoInteractions(movements);
+    }
+
+    @Test void importsNewCatalogItemEvenWhenStockIsMissing() {
+        when(products.findByStoreIdAndCloverItemId(1L, "item1")).thenReturn(Optional.empty());
+        when(client.getItemStocks(1L)).thenReturn(json.readTree("{\"elements\":[]}"));
+        var result = service.synchronize(1L);
+        assertEquals(1, result.created()); assertEquals(1, result.skipped());
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
+        verify(products).save(captor.capture());
+        assertFalse(captor.getValue().isStockKnown());
+        assertFalse(captor.getValue().isLowStock());
         verifyNoInteractions(movements);
     }
 }

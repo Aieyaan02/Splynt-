@@ -48,7 +48,7 @@ class CloverSalesSyncServiceTest {
         var events = sales.findAllByStoreIdAndOccurredAtGreaterThanEqualOrderByOccurredAtAsc(store.getId(), OffsetDateTime.now().minusDays(90));
         assertEquals(2, events.size());
         assertEquals(0, events.getFirst().getUnits().compareTo(BigDecimal.ONE));
-        assertEquals(10, products.findById(product.getId()).orElseThrow().getQuantity());
+        assertEquals(10, products.findById(product.getId()).orElseThrow().getQuantity().intValueExact());
     }
     @Test void laterRefundRemovesPreviouslyCountedSales() {
         sync.synchronize(store.getId()); orders("REFUNDED"); sync.synchronize(store.getId());

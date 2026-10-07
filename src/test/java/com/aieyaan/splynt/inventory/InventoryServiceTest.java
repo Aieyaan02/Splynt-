@@ -71,7 +71,7 @@ class InventoryServiceTest {
                         request
                 );
 
-        assertEquals(7, response.product().quantity());
+        assertEquals(7, response.product().quantity().intValueExact());
 
         assertEquals(
                 InventoryMovementType.SALE,
@@ -80,17 +80,17 @@ class InventoryServiceTest {
 
         assertEquals(
                 -3,
-                response.movement().quantityChange()
+                response.movement().quantityChange().intValueExact()
         );
 
         assertEquals(
                 10,
-                response.movement().quantityBefore()
+                response.movement().quantityBefore().intValueExact()
         );
 
         assertEquals(
                 7,
-                response.movement().quantityAfter()
+                response.movement().quantityAfter().intValueExact()
         );
 
         assertEquals(
@@ -145,7 +145,7 @@ class InventoryServiceTest {
                         request
                 );
 
-        assertEquals(15, response.product().quantity());
+        assertEquals(15, response.product().quantity().intValueExact());
 
         assertEquals(
                 InventoryMovementType.RESTOCK,
@@ -154,17 +154,17 @@ class InventoryServiceTest {
 
         assertEquals(
                 5,
-                response.movement().quantityChange()
+                response.movement().quantityChange().intValueExact()
         );
 
         assertEquals(
                 10,
-                response.movement().quantityBefore()
+                response.movement().quantityBefore().intValueExact()
         );
 
         assertEquals(
                 15,
-                response.movement().quantityAfter()
+                response.movement().quantityAfter().intValueExact()
         );
 
         assertEquals(
@@ -210,7 +210,7 @@ class InventoryServiceTest {
                 exception.getMessage()
         );
 
-        assertEquals(10, product.getQuantity());
+        assertEquals(10, product.getQuantity().intValueExact());
 
         verify(productRepository, never())
                 .save(any(Product.class));

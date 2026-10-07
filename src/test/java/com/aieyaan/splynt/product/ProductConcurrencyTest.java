@@ -30,7 +30,7 @@ class ProductConcurrencyTest {
             second.recordSale(4);
             products.saveAndFlush(first);
             assertThrows(OptimisticLockingFailureException.class, () -> products.saveAndFlush(second));
-            assertEquals(7, products.findById(original.getId()).orElseThrow().getQuantity());
+            assertEquals(7, products.findById(original.getId()).orElseThrow().getQuantity().intValueExact());
         } finally {
             products.deleteById(original.getId());
             stores.deleteById(store.getId());

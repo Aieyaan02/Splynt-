@@ -81,14 +81,14 @@ public class InsightsService {
                 .map(e -> {
                     Product p = catalog.get(e.getKey());
                     BigDecimal velocity = sufficient ? e.getValue().divide(BigDecimal.valueOf(days), 3, RoundingMode.HALF_UP) : null;
-                    BigDecimal cover = velocity == null || velocity.signum() == 0 ? null
-                            : BigDecimal.valueOf(p.getQuantity()).divide(velocity, 1, RoundingMode.HALF_UP);
-                    return new ProductInsight(p.getId(), p.getName(), e.getValue(), velocity, cover, p.getQuantity());
+                    BigDecimal cover = !p.isStockKnown() || velocity == null || velocity.signum() == 0 ? null
+                            : p.getQuantity().max(BigDecimal.ZERO).divide(velocity, 1, RoundingMode.HALF_UP);
+                    return new ProductInsight(p.getId(), p.getName(), e.getValue(), velocity, cover, p.isStockKnown() ? p.getQuantity() : null);
                 }).toList();
         BigDecimal total = totals.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         return new Summary(days, orders.size(), total, sufficient, leaders, List.of(hourly), List.of(weekdays));
     }
-    public record ProductInsight(Long productId, String name, BigDecimal units, BigDecimal unitsPerDay, BigDecimal estimatedDaysRemaining, int currentStock) {}
+    public record ProductInsight(Long productId, String name, BigDecimal units, BigDecimal unitsPerDay, BigDecimal estimatedDaysRemaining, BigDecimal currentStock) {}
     public record Summary(int completeDays, int orders, BigDecimal units, boolean sufficientForVelocity,
             List<ProductInsight> topProducts, List<BigDecimal> hourlyUnits, List<BigDecimal> weekdayUnits) {}
     public record Insights(String storeName, String location, String timezone, OffsetDateTime lastSyncedAt, String syncError,

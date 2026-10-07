@@ -45,7 +45,8 @@ class InsightsServiceTest {
     @Test void velocityIncludesZeroSaleDaysAndCountsOrdersOnce() {
         Product product = mock(Product.class);
         when(product.getId()).thenReturn(1L); when(product.getName()).thenReturn("Coffee");
-        when(product.getQuantity()).thenReturn(12);
+        when(product.getQuantity()).thenReturn(BigDecimal.valueOf(12));
+        when(product.isStockKnown()).thenReturn(true);
         List<SalesEvent> events = new ArrayList<>();
         for (int i = 0; i < 30; i++) {
             events.add(event("order" + i, "2026-09-02T14:00:00Z", "1"));

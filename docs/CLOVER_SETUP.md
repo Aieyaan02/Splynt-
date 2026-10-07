@@ -33,7 +33,7 @@ A provider authorization error returns to the app with `clover=failed`. No codes
 
 V8 preserves legacy credentials but leaves them unassigned. There is deliberately no fallback to globally configured merchant tokens: each store must connect explicitly. Once an existing merchant is authorized, its credential row is attached to the store and replaced with encrypted tokens. The old `CLOVER_MERCHANT_ID`, `CLOVER_ACCESS_TOKEN`, and `CLOVER_REFRESH_TOKEN` variables are no longer used.
 
-Inventory currently supports nonnegative whole units. Items with unknown, fractional, negative, or out-of-range stock are skipped, not rounded or set to zero. Skipped counts appear in connection status. Archived products stay archived. Quantity changes imported from Clover are audit adjustments, not evidence of individual sales; sales insights must ingest actual order/line-item data separately.
+Inventory supports up to six decimal places. Clover negative balances are preserved. Missing, malformed, out-of-range or over-precision stock marks a catalog item as unknown rather than rounding it, setting it to zero, or hiding the catalog item. Connection warnings count items requiring review. Archived products stay archived. Quantity changes imported from Clover are audit adjustments, not evidence of individual sales; sales insights must ingest actual order/line-item data separately.
 
 ## Verification status
 
@@ -45,7 +45,7 @@ Enable Clover order-read permission before connecting a staging store to import 
 
 Only paid, non-refunded supported product lines are counted. Partially refunded orders are currently excluded rather than estimated. Ordinary line items count as one unit; per-unit quantities use Clover's thousandths representation. Unknown catalog items and unsupported quantities are skipped. No customer/payment details are persisted. Timing reflects order creation, not payment time.
 
-Dashboard calculations use up to 30 full local calendar days covered by the last successful import. Failed or stopped imports do not add zero-sale days. The dashboard shows the last import and date window; stock-cover estimates assume the observed average continues and are not demand forecasts. Seasonal and AI product recommendations remain future implementation work.
+Dashboard calculations use up to 30 full local calendar days covered by the last successful import. Failed or stopped imports do not add zero-sale days. The dashboard shows the last import and date window; stock-cover estimates assume the observed average continues and are not demand forecasts. Historical comparisons are available as described below; optional AI reports are documented in AI_RECOMMENDATIONS.md.
 
 ### Store location and local reporting
 
@@ -65,4 +65,13 @@ Splynt now requests Clover's category expansion and stores SKU, alternate name, 
 
 Clover item ID is the imported product identity. A matching barcode alone will no longer convert a manual product or relink a different Clover item. Conflicts are skipped and included in the connection warning; no involved stock is overwritten. The current warning is an aggregate count; a detailed per-item conflict resolution workflow remains to implement. Deleted items and overlong required identifiers/names are also skipped. Local reorder targets and costs remain under the retailer's control.
 
-Implementation references: [Clover inventory items and expansions](https://docs.clover.com/dev/reference/inventorygetitems), [Clover item fields](https://docs.clover.com/dev/reference/inventorycreateitem), and [category expansion behavior](https://docs.clover.com/dev/docs/managing-categories). Category arrays reflect the provider expansion; a dedicated reconciliation of paginated category associations is not yet implemented. Fractional, negative and missing stock still require further work and are not silently rounded or treated as zero.
+Implementation references: [Clover inventory items and expansions](https://docs.clover.com/dev/reference/inventorygetitems), [Clover item fields](https://docs.clover.com/dev/reference/inventorycreateitem), and [category expansion behavior](https://docs.clover.com/dev/docs/managing-categories). Category arrays reflect the provider expansion; a dedicated reconciliation of paginated category associations is not yet implemented. Decimal and unknown-stock behavior is described below.
+
+
+### Decimal quantities and unknown stock
+
+V14 upgrades product quantities, reorder/target levels and audit balances to exact decimal columns with six fractional digits. Existing whole quantities migrate without conversion. Manual product creation, sales, restocks and target editing accept fractional values; extra precision or out-of-range input is rejected. Negative manual starting stock is rejected. Clover negative balances are preserved and trigger low-stock evaluation; they represent provider balances, not physical quantities to silently clamp to zero.
+
+The product API returns `stockKnown: false` and `quantity: null` when provider stock is missing or unsupported. The previous numeric balance is retained internally for reconciliation history. Unknown stock does not produce a low-stock alert or stock-cover estimate; the dashboard highlights it and provides an Unknown stock filter. Catalog details still import. When known stock returns, audit adjustments describe reconciliation against the last recorded balance, not a sale.
+
+Inventory valuation excludes unknown and negative balances and marks the value partial when needed. The dashboard counts products with positive stock rather than adding unlike units such as kilograms and bottles. Unit labels come from Clover catalog details when supplied. The sync response's legacy `skipped` count now means items requiring review (including products whose catalog imported but stock is unknown), so it must not be added to created/updated counts to derive a total.

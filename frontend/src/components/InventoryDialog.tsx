@@ -57,7 +57,7 @@ export function InventoryDialog({
             return;
         }
 
-        if (isSale && quantity > product.quantity) {
+        if (product.quantity === null || (isSale && quantity > product.quantity)) {
             setError(
                 `Only ${product.quantity} units are available`
             );
@@ -158,10 +158,11 @@ export function InventoryDialog({
                     Quantity
                     <input
                         type="number"
-                        min="1"
+                        min="0.000001"
+                        step="0.000001"
                         max={
                             isSale
-                                ? product.quantity
+                                ? product.quantity ?? undefined
                                 : undefined
                         }
                         value={quantity}
