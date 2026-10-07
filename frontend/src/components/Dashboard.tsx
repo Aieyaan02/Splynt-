@@ -1,3 +1,4 @@
+import { AdvicePanel } from "./AdvicePanel";
 import { StoreSettingsDialog } from "./StoreSettingsDialog";
 import { InsightsPanel } from "./InsightsPanel";
 import { ProductDetailsDialog } from "./ProductDetailsDialog";
@@ -760,6 +761,7 @@ export function Dashboard({
                     )}
                 </section>
 
+                {selectedStoreId !== null && <AdvicePanel key={`advice-${selectedStoreId}-${storeRevision}`} storeId={selectedStoreId} canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"} />}
                 {selectedStoreId !== null && <InsightsPanel key={`${selectedStoreId}-${storeRevision}`} storeId={selectedStoreId} />}
                 <section
                     id="archived-products-section"

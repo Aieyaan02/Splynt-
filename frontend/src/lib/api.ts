@@ -289,3 +289,15 @@ export const storeApi = {
     update(id: number, data: StoreSettings): Promise<StoreSettings> { return request(`/api/stores/${id}/settings`, { method: "PATCH", body: JSON.stringify(data) }); },
     create(organizationId: number, data: StoreSettings): Promise<StoreSettings> { return request(`/api/organizations/${organizationId}/stores`, { method: "POST", body: JSON.stringify(data) }); }
 };
+
+export interface AdviceView {
+    configured: boolean; canGenerate: boolean; message: string | null; generatedAt: string | null;
+    nextGenerationAt: string | null; model: string | null; error: string | null;
+    report: { summary: string; actions: { title: string; rationale: string; nextStep: string; evidenceIds: string[] }[];
+        productExperiments: { productIdea: string; hypothesis: string; smallTest: string; measure: string; evidenceIds: string[] }[]; limitations: string[] } | null;
+    evidence: Record<string, unknown> | null;
+}
+export const adviceApi = {
+    read(storeId: number): Promise<AdviceView> { return request(`/api/stores/${storeId}/advice`); },
+    generate(storeId: number): Promise<AdviceView> { return request(`/api/stores/${storeId}/advice`, { method: "POST" }); }
+};
