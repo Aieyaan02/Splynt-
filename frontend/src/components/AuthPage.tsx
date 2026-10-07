@@ -1,3 +1,4 @@
+import { passwordEncodingError } from "../lib/passwordValidation";
 import { Brand } from "./Brand";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -55,6 +56,8 @@ export function AuthPage({
     async function handleLogin(event: FormEvent) {
         event.preventDefault();
 
+        const encodingError = passwordEncodingError(loginPassword);
+        if (encodingError) { setError(encodingError); return; }
         setBusy(true);
         setError("");
         setSuccess("");
@@ -80,6 +83,8 @@ export function AuthPage({
     async function handleRegistration(event: FormEvent) {
         event.preventDefault();
 
+        const encodingError = passwordEncodingError(registration.password);
+        if (encodingError) { setError(encodingError); return; }
         setBusy(true);
         setError("");
         setSuccess("");
@@ -381,7 +386,7 @@ export function AuthPage({
                                 />
 
                                 <small>
-                                    Use 10–72 characters.
+                                    Use at least 10 characters. Emoji and some letters count toward the limit faster.
                                 </small>
                             </label>
 

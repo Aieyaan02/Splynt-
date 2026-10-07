@@ -16,6 +16,7 @@ public record LoginRequest(
                 max = 72,
                 message = "Password cannot exceed 72 characters"
         )
+        @com.aieyaan.splynt.auth.validation.PasswordByteLimit
         String password
 ) {
 }

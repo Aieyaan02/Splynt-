@@ -18,6 +18,7 @@ public record RegisterRequest(
                 max = 72,
                 message = "Password must contain between 10 and 72 characters"
         )
+        @com.aieyaan.splynt.auth.validation.PasswordByteLimit
         String password,
 
         @NotBlank(message = "First name is required")

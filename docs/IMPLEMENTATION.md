@@ -209,3 +209,7 @@ The Clover connection poll now waits for its prior check and dashboard refresh t
 ### Consistent low-stock dashboard snapshot
 
 The low-stock summary and list now derive from the active product response's server-calculated lowStock flags. Previously, separate inventory and low-stock requests could observe different committed imports and disagree. This removes a redundant request on each refresh while retaining server rules for unknown quantities and reorder thresholds. Frontend tests and build passed; lint is clean. Browser acceptance remains pending.
+
+### Password encoding validation
+
+Signup and login now validate the password encoder's 72-byte UTF-8 limit before calling it. The previous 72-character limit accepted some multibyte passwords that the encoder could reject. Matching frontend validation provides actionable feedback without truncating or normalizing passwords. Backend validation/auth tests and 12 frontend tests pass, as do lint/build. Account recovery/email verification are still incomplete; an email-service preference has been requested without asking for secrets.
