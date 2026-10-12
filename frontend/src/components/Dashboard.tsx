@@ -444,7 +444,7 @@ export function Dashboard({
                     </div>
                 </header>
                 <section className="connection-panel" aria-label="Store integration">
-                    <div className="connection-panel-label"><span className="connection-icon">⇄</span><div><strong>Your store, connected.</strong><p>Bring your Clover inventory into focus.</p></div></div>
+                    <div className="connection-panel-label"><span className="connection-icon">⇄</span><div><strong>Your store, connected.</strong><p>Bring your POS inventory into focus.</p></div></div>
                     <CloverAutoSync
                         key={selectedStoreId}
                         canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"}
@@ -457,8 +457,8 @@ export function Dashboard({
                 {connectionResult && (
                     <div className={connectionResult === "connected" ? "message" : "message error-message"} role="status">
                         {connectionResult === "connected"
-                            ? "Clover is connected. Your inventory will appear after the first sync; you can also choose Sync now."
-                            : "Clover wasn't connected. Try again from this browser and approve store access. If it keeps failing, contact support."}
+                            ? "POS is connected. Your inventory will appear after the first sync; you can also choose Sync now."
+                            : "POS wasn't connected. Try again from this browser and approve store access. If it keeps failing, contact support."}
                         <button type="button" className="button secondary compact" onClick={() => setConnectionResult(null)}>Dismiss</button>
                     </div>
                 )}
@@ -468,7 +468,11 @@ export function Dashboard({
                     </div>
                 )}
 
-                {unknownStock > 0 && <p className="message error-message" role="status">Stock is unknown for {unknownStock} products. They are excluded from low-stock alerts and inventory value. Check stock tracking in Clover and sync again.</p>}
+                {unknownStock > 0 && <p className="message error-message" role="status">Stock is unknown for {unknownStock} products. They are excluded from low-stock alerts and inventory value. Check stock tracking in your POS system and sync again.</p>}
+                {!loading && products.length === 0 && <aside className="setup-guide" aria-label="Getting started">
+                    <strong>Your first inventory check</strong><span>01 · Set your store details</span><span>02 · Connect your POS system</span><span>03 · Review stock and set targets</span>
+                    <p>Connect a supported provider above or add a product to explore. After importing, check quantities against your POS and set a minimum and target for each item.</p>
+                </aside>}
                 <section className="statistics-grid">
                     <StatCard
                         label="Total products"
@@ -514,6 +518,7 @@ export function Dashboard({
                             <h2>
                                 Low-stock recommendations
                             </h2>
+                            <p>Suggestions refill each item to your target. They do not place orders.</p>
                         </div>
 
                         <span className="badge warning-badge">
@@ -623,7 +628,7 @@ export function Dashboard({
                             <h3>Your shelves start here.</h3>
 
                             <p>
-                                Connect your Clover store above to import inventory,
+                                Connect your POS system above to import inventory,
                                 or add your first product manually.
                             </p>
                         </div>
@@ -705,7 +710,7 @@ export function Dashboard({
                                                         disabled={
                                                             product.source === "CLOVER" || (product.quantity ?? 0) <= 0
                                                         }
-                                                        title={product.source === "CLOVER" ? "Manage stock in Clover, then sync Splynt" : undefined}
+                                                        title={product.source === "CLOVER" ? "Manage stock in your POS system, then sync Splynt" : undefined}
                                                         onClick={() =>
                                                             openInventoryDialog(
                                                                 product,
@@ -720,7 +725,7 @@ export function Dashboard({
                                                         className="button secondary compact"
                                                         type="button"
                                                         disabled={product.source === "CLOVER"}
-                                                        title={product.source === "CLOVER" ? "Manage stock in Clover, then sync Splynt" : undefined}
+                                                        title={product.source === "CLOVER" ? "Manage stock in your POS system, then sync Splynt" : undefined}
                                                         onClick={() =>
                                                             openInventoryDialog(
                                                                 product,

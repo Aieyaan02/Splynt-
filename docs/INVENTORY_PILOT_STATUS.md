@@ -1,27 +1,31 @@
 # Inventory pilot checkpoint — 2026-10-12
 
-Work is local on dev/splynt-platform. Main and the deployed sample service have not been changed. This is not a live Clover connection or an approved application.
+## Current scope
 
-## Verified
+The `pilot` branch is the inventory-only release candidate. Main and the existing deployed demo remain unchanged. The owner has created a separate Neon Free project but has not deployed a new Render service. Deployment is paused pending Clover developer verification; production application approval and real merchant authorization may require additional steps.
 
-- Existing inventory and store authorization implementation reused, not rebuilt.
-- Default backend configuration disables sales import/backfill jobs and removes sales/history/AI controllers. Deferred service code remains for later.
-- Pilot dashboard omits sales-history and AI panels; public website no longer advertises those as current features.
-- Sync status now includes the date and explains server availability rather than promising uninterrupted background sync.
-- Simulated merchant acceptance verifies signup/login, browser-bound OAuth, inventory import, low-stock/reorder quantities, access denial for a different business, recovery from provider failure, and zero order requests in inventory-only mode.
-- Full backend suite: 222 tests, zero failures/errors. Run with Mockito loaded as a JVM agent because automatic self-attachment failed under the current runtime.
-- Frontend: 15 tests passed, lint passed, production build passed. Git whitespace validation passed.
+## Completed and checked
 
-## Not verified / external dependencies
+- Store-scoped authorization, browser-bound OAuth, encrypted provider tokens and read-only inventory imports.
+- Low-stock recommendations use configured minimum and target stock, not fabricated sales history or forecasts.
+- Import tests cover missing/invalid/negative/fractional quantities, archived/deleted items, duplicate barcodes, failed sync preservation and recovery.
+- Full local backend suite: 227 tests passed, zero failures/errors/skips. Mockito loaded as a startup agent. Tests use H2; this is not production PostgreSQL acceptance.
+- Frontend: 15 tests passed, lint and production build passed.
+- Provider-neutral UI labels and explicit Syncing status; warmer surfaces, card depth, stock emphasis and first-use guidance retain the original green/cream design.
+- Inquiry persistence and optional email queue implemented. Email delivery remains disabled at the owner's request; no provider key or live email test.
+- Known-pattern credential scan found no matches in tracked working files and reachable local Git history. Local `.env` files are ignored. CI runs the same scan. This is a bounded check, not a guarantee that every possible private value has been detected.
 
-- PostgreSQL migration/schema acceptance: Docker daemon unavailable, and Docker application could not be found. The current successful backend suite used its test database configuration, not an independent PostgreSQL run.
-- Actual browser visual/accessibility review: not performed; earlier browser permission denial has not been explicitly resolved.
-- Hosting migration/deployment: not performed. Candidate free platforms require account selection, capacity checks and live setup.
-- Real Clover authorization and data accuracy: requires correct production developer/app setup and owner merchant authorization.
-- Legal/support identity and policy decisions: require owner input; submission draft deliberately does not invent them.
-- No PR or Clover submission created. Earlier GitHub PR creation lacked permission. Current changes have not been pushed.
-- Earlier uncommitted historical backfill work remains preserved and disabled for the pilot. Its tests pass in this suite; PostgreSQL verification remains outstanding.
+## Required before real-store use
 
-## Handoff
+- Visual review in the owner's browser, including mobile and keyboard use. Browser automation remains unavailable under the saved permission state; no visual validation is claimed.
+- Confirm GitHub CI results, especially PostgreSQL migrations and container build.
+- Complete provider production setup/approval; authorize the real merchant.
+- Configure isolated Free hosting/database secrets and verify startup, callback URL, TLS and database backup/export procedure.
+- Compare actual product quantities, archived items and recommendation settings against the POS.
+- Complete owner business/support/privacy details in the submission draft.
 
-Read CLOVER_PILOT_SUBMISSION.md for the app description, permissions justification, reviewer walkthrough and owner checklist. Read INVENTORY_PILOT_HOSTING.md for deployment settings. Historical/AI implementation is outside the pilot scope.
+## Branch plan
+
+Additional reorder-export and AI work begins on `feature/store-intelligence`, branched from this pilot checkpoint. Do not deploy or merge it until separately reviewed. Legacy sales/AI code already exists in pilot history but is disabled and absent from its dashboard; new feature changes stay on the feature branch.
+
+AI provider use remains unconfigured. Automated local tests use simulated responses and must never be described as real store evidence. No paid AI requests are authorized by the free-only requirement.

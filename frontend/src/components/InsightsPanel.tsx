@@ -13,12 +13,12 @@ export function InsightsPanel({ storeId }: { storeId: number }) {
         void load(); const timer = window.setInterval(() => void load(), 60_000);
         return () => { cancelled = true; window.clearInterval(timer); };
     }, [storeId]);
-    return <section className="content-card" id="insights-section"><div className="section-heading"><div><span className="section-kicker">Your store’s rhythm</span><h2>Sales insights</h2></div><span className="badge">Clover orders</span></div>
+    return <section className="content-card" id="insights-section"><div className="section-heading"><div><span className="section-kicker">Your store’s rhythm</span><h2>Sales insights</h2></div><span className="badge">POS orders</span></div>
         {error && <p role="alert" className="message error-message">{error}</p>}
         {!data && !error ? <p>Loading sales insights…</p> : data && <>
             <p className="detail-info">{data.storeName} · {data.location || "Location not set"} · {data.timezone}</p>
             {data.syncError && <p className="message error-message" role="status">{data.syncError}</p>}
-            {!data.lastSyncedAt ? <div className="empty-state"><h3>Let’s learn your store’s rhythm.</h3><p>Connect Clover with order-read permission. After sales history imports, your product and timing insights will appear here.</p></div> : <>
+            {!data.lastSyncedAt ? <div className="empty-state"><h3>Let’s learn your store’s rhythm.</h3><p>Connect your POS system with order-read permission. After sales history imports, your product and timing insights will appear here.</p></div> : <>
                 <p className="detail-info">Last successful sales import: {new Date(data.lastSyncedAt).toLocaleString(undefined, { timeZone: data.timezone })} ({data.timezone}). Analysis ends before {data.untilExclusive}; later days are not counted as zero sales.</p>
                 <div className="insight-summary"><div><strong>{data.summary.orders}</strong><span>paid orders</span></div><div><strong>{data.summary.completeDays}</strong><span>complete days analyzed</span></div></div>
                 {!data.summary.sufficientForVelocity && <p className="detail-info">Daily velocity estimates need at least 14 complete days and 30 included orders. We’ll show estimates when there’s enough data.</p>}

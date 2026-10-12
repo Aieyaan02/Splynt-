@@ -178,7 +178,7 @@ export function AuthPage({
                             <strong>Stay connected</strong>
 
                             <span>
-                                Bring your Clover inventory into view
+                                Bring your POS inventory into view
                             </span>
                         </article>
 

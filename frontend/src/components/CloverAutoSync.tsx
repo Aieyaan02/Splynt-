@@ -1,3 +1,4 @@
+import { providerCopy } from "../lib/providerCopy";
 import { useEffect, useRef, useState } from "react";
 import { syncRefresh } from "../lib/syncRefresh";
 import { cloverApi, type CloverConnection } from "../lib/api";
@@ -11,7 +12,7 @@ interface CloverAutoSyncProps {
 export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAutoSyncProps) {
     const [connection, setConnection] = useState<CloverConnection | null>(null);
     const [error, setError] = useState("");
-    const [busy, setBusy] = useState(false);
+    const [busy, setBusy] = useState<"connect" | "sync" | null>(null);
     const onRefresh = useRef(onSynchronized);
     useEffect(() => { onRefresh.current = onSynchronized; }, [onSynchronized]);
 
@@ -30,7 +31,7 @@ export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAut
                 setError("");
                 await snapshot.run(result.lastSyncedAt, () => onRefresh.current());
             } catch (failure) {
-                if (!cancelled) setError(failure instanceof Error ? failure.message : "Unable to check Clover connection.");
+                if (!cancelled) setError(failure instanceof Error ? failure.message : "Unable to check POS connection.");
             } finally { pending = false; }
         }
         void refresh();
@@ -40,50 +41,50 @@ export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAut
 
     async function connect() {
         if (storeId === null) return;
-        setBusy(true); setError("");
+        setBusy("connect"); setError("");
         try {
             const result = await cloverApi.connect(storeId);
             window.location.assign(result.authorizationUrl);
         } catch (failure) {
-            setError(failure instanceof Error ? failure.message : "Unable to connect Clover.");
-            setBusy(false);
+            setError(failure instanceof Error ? failure.message : "Unable to connect your POS system.");
+            setBusy(null);
         }
     }
 
     async function synchronize() {
         if (storeId === null) return;
-        setBusy(true); setError("");
+        setBusy("sync"); setError("");
         try {
             await cloverApi.sync(storeId);
             setConnection(await cloverApi.status(storeId));
             await onSynchronized();
         } catch (failure) {
             setError(failure instanceof Error ? failure.message : "Unable to sync inventory.");
-        } finally { setBusy(false); }
+        } finally { setBusy(null); }
     }
 
     if (storeId === null) return null;
     return <div className="clover-connection" aria-live="polite">
         <p className="clover-sync-status">
-            {connection === null ? "Checking store connection…" : connection.connected
+            {busy === "sync" ? "Syncing…" : connection === null ? "Checking store connection…" : connection.connected
                 ? connection.lastSyncedAt
-                    ? `Clover connected · Updated ${new Date(connection.lastSyncedAt).toLocaleString()}`
-                    : "Clover connected · Use Sync now to import your inventory."
-                : "Connect Clover to bring your inventory into Splynt."}
+                    ? `POS connected · Updated ${new Date(connection.lastSyncedAt).toLocaleString()}`
+                    : "POS connected · Use Sync now to import your inventory."
+                : "Connect your POS system to bring your inventory into Splynt."}
         </p>
         {connection?.connected && <small>Automatic refresh requires the server to be running. Use Sync now to request fresh inventory.</small>}
         {canManage && <div className="table-actions">
-            <button type="button" className="button secondary compact" disabled={busy || !connection} onClick={() => void connect()}>
-                {busy ? "Working…" : connection?.connected ? "Reconnect Clover" : "Connect Clover"}
+            <button type="button" className="button secondary compact" disabled={busy !== null || !connection} onClick={() => void connect()}>
+                {busy === "connect" ? "Connecting…" : connection?.connected ? "Reconnect your POS system" : "Connect your POS system"}
             </button>
-            {connection?.connected && <button type="button" className="button secondary compact" disabled={busy} onClick={() => void synchronize()}>Sync now</button>}
+            {connection?.connected && <button type="button" className="button secondary compact" disabled={busy !== null} onClick={() => void synchronize()}>{busy === "sync" ? "Syncing…" : "Sync now"}</button>}
         </div>}
-        {!canManage && connection && !connection.connected && <small>Ask your store owner or admin to connect Clover.</small>}
+        {!canManage && connection && !connection.connected && <small>Ask your store owner or admin to connect your POS system.</small>}
         {connection && connection.issueCount > 0 && <details className="import-review"><summary>Review {connection.issueCount} inventory {connection.issueCount === 1 ? "item" : "items"}</summary>
             <p>From the last completed import{connection.lastSyncedAt ? ` on ${new Date(connection.lastSyncedAt).toLocaleString()}` : ""}. A failed refresh does not clear this list.</p>
             {connection.issueCount > connection.issues.length && <p>Showing the first {connection.issues.length} items. Resolve these and sync again to see remaining issues.</p>}
-            <ul>{connection.issues.map((issue, index) => <li key={`${issue.itemId}-${index}`}><strong>{issue.name ?? "Unnamed Clover item"}</strong><span>{issue.reason === "BARCODE_CONFLICT" ? "Barcode conflict" : issue.reason === "MISSING_CATALOG_ITEM" ? "Missing from Clover catalog" : issue.reason === "UNKNOWN_STOCK" ? "Unknown stock" : issue.reason === "INVALID_BARCODE" ? "Unsupported barcode" : "Incomplete item details"}</span><small>{issue.barcode ? `Barcode: ${issue.barcode} · ` : ""}{issue.itemId ? `Clover item: ${issue.itemId}` : "No item identifier supplied"}</small><p>{issue.nextStep}</p></li>)}</ul>
+            <ul>{connection.issues.map((issue, index) => <li key={`${issue.itemId}-${index}`}><strong>{issue.name ?? "Unnamed POS item"}</strong><span>{issue.reason === "BARCODE_CONFLICT" ? "Barcode conflict" : issue.reason === "MISSING_CATALOG_ITEM" ? "Missing from your POS system catalog" : issue.reason === "UNKNOWN_STOCK" ? "Unknown stock" : issue.reason === "INVALID_BARCODE" ? "Unsupported barcode" : "Incomplete item details"}</span><small>{issue.barcode ? `Barcode: ${issue.barcode} · ` : ""}{issue.itemId ? `POS item: ${issue.itemId}` : "No item identifier supplied"}</small><p>{providerCopy(issue.nextStep)}</p></li>)}</ul>
         </details>}
-        {(error || connection?.lastSyncError) && <p role="alert" className="message error-message">{error || connection?.lastSyncError}</p>}
+        {(error || connection?.lastSyncError) && <p role="alert" className="message error-message">{providerCopy(error || connection?.lastSyncError || "")}</p>}
     </div>;
 }

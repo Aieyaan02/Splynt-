@@ -1,3 +1,4 @@
+import { providerCopy } from "./providerCopy";
 import type {
     Account,
     InventoryMovement,
@@ -105,8 +106,8 @@ async function request<T>(
             : null;
 
         throw new ApiRequestError(
-            apiError?.message
-                ?? `Request failed with status ${response.status}`,
+            providerCopy(apiError?.message
+                ?? `Request failed with status ${response.status}`),
             response.status,
             apiError?.validationErrors ?? {}
         );
