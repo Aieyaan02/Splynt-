@@ -120,31 +120,12 @@ th { font-weight:500; font-size:9px; background:#f6f8f1; }td { font-size:12px; p
 .recovery-card .form-stack { margin-top:24px; }
 @media(max-width:520px) { .recovery-page { padding:20px 14px; } .recovery-card { padding:26px 20px; } }
 
-/* Warm surfaces and restrained depth retain the original Splynt palette. */
-.marketing { background:radial-gradient(ellipse at 85% 12%, #e7edda 0, transparent 38%), #fbfbf7; }
-.site-header { border-bottom:1px solid #dce3d580; }
-.hero-art .inventory-preview { box-shadow:0 32px 75px #263e3524, 0 3px 8px #263e350a; }
-.feature-card { border:1px solid #ffffffb3; box-shadow:0 12px 28px #263e3508; }
-.dashboard-layout { background:radial-gradient(ellipse at top right, #e9efdd, transparent 50%), #f7f8f4; }
-.sidebar { background:radial-gradient(ellipse at 0 0, #456048, transparent 65%), #263e35; }
-.dashboard-header { padding:12px 0 20px; border-bottom:1px solid #dce3d5; }
-.dashboard-header h1 { letter-spacing:-1.2px; overflow-wrap:anywhere; }
-.connection-panel { background:linear-gradient(115deg, #eef4e4, #fafbf6); box-shadow:0 6px 20px #263e3506; }
-.statistic-card { position:relative; overflow:hidden; border:1px solid #dfe6d8; box-shadow:0 8px 25px #263e3507; background:linear-gradient(150deg, #fff, #f8faf4); }
-.statistic-card::before { content:""; display:block; width:26px; height:4px; border-radius:8px; background:#92ac74; margin-bottom:18px; }
-.statistic-card:nth-child(2) { background:linear-gradient(140deg, #fffaf0, #f6edda); border-color:#e9d9b8; }
-.statistic-card:nth-child(2)::before { background:#ba8736; }
-.statistic-card strong { font-variant-numeric:tabular-nums; letter-spacing:-1px; }
-.content-card { box-shadow:0 9px 32px #263e3506; border-color:#dfe6d8; }
-.low-stock-card { border-radius:14px; background:linear-gradient(145deg,#fffef9,#faf5e9); border-top:3px solid #ceaa64; }
-.stock-values { padding-top:14px; border-top:1px solid #e7ddca; }
-.stock-values strong { font-variant-numeric:tabular-nums; }
 .setup-guide { display:flex; flex-wrap:wrap; gap:12px 28px; margin:0 0 25px; padding:18px 22px; background:#ffffffad; border:1px dashed #c4d1b6; border-radius:12px; }
 .setup-guide strong { font-size:13px; }
 .setup-guide p { flex-basis:100%; margin:0; font-size:12px; color:#52614b; line-height:1.7; }
 .setup-guide span { font-size:12px; color:#52614b; }
 .section-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
-@media(max-width:760px) { .dashboard-header { padding-top:0; }.setup-guide { padding:16px; gap:12px; }.section-heading { flex-wrap:wrap; gap:14px; } }
+@media(max-width:760px) { .setup-guide { padding:16px; gap:12px; }.section-heading { flex-wrap:wrap; gap:14px; } }
 @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; }.button { transition:none; }.button:hover:not(:disabled) { transform:none; } }
 .intelligence-readiness { margin:20px 0; padding:22px; background:#f3f6ed; border:1px solid #dce5ce; border-radius:12px; }
 .intelligence-readiness h3 { margin:0 0 8px; font-size:16px; }
@@ -156,3 +137,17 @@ th { font-weight:500; font-size:9px; background:#f6f8f1; }td { font-size:12px; p
 .ai-consent { display:flex; align-items:flex-start; gap:10px; font-size:12px; line-height:1.7; margin:14px 0; }
 .ai-consent input { width:18px; min-width:18px; height:18px; }
 @media(max-width:760px) { .intelligence-readiness ul { grid-template-columns:1fr; } }
+
+/* Keep the shared wordmark and auth copy clear at narrow widths and zoom. */
+.brand { white-space:nowrap; line-height:1.2; }
+.auth-visual { min-width:0; gap:40px; }
+.auth-visual .hero-content { width:100%; min-width:0; padding:24px 0; }
+.auth-visual .hero-content h1 { font-size:clamp(36px,3.6vw,56px); line-height:1.15; letter-spacing:-.035em; overflow-wrap:break-word; }
+.auth-visual .hero-features { grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:24px; }
+.auth-visual .hero-features article { min-width:0; }
+.auth-visual .hero-features strong { line-height:1.5; overflow-wrap:break-word; }
+.auth-card { min-width:0; }
+.auth-card .form-heading h2 { line-height:1.2; }
+.auth-card .mobile-brand { align-items:center; }
+.auth-card .auth-back { display:block; }
+@media(max-width:480px) { .auth-card .two-columns { grid-template-columns:minmax(0,1fr); }.auth-form-side { padding:16px; }.auth-card { padding:22px 18px; } }

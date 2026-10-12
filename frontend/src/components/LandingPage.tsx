@@ -37,9 +37,9 @@ export function LandingPage({ signedIn, route }: { signedIn: boolean; route: str
         <main id="main-content" tabIndex={-1}>
             <section className="landing-hero">
                 <div className="hero-copy"><span className="pill-label"><i /> Built for independent retailers</span>
-                    <h1>A little clarity.<br />A better stocked<br /><em>tomorrow.</em></h1>
+                    <h1>Know your stock.<br />Plan your next<br /><em>restock.</em></h1>
                     <p>Your shelves have a story. Connect your POS system, see what’s running low, and make your next restock a little simpler.</p>
-                    <div className="hero-cta"><a className="button primary" href="#/signup">Create your workspace <span aria-hidden="true">↗</span></a><a className="text-link" href="#/product">Take a closer look <span aria-hidden="true">↓</span></a></div>
+                    <div className="hero-cta"><a className="button primary" href="#/signup">Create your workspace</a><a className="text-link" href="#/product">Take a closer look <span aria-hidden="true">↓</span></a></div>
                     <div className="hero-fineprint">Your store. Your inventory. One clear view.</div>
                 </div>
                 <div className="hero-art" aria-label="Illustration of a Splynt inventory overview with sample data">
@@ -66,12 +66,7 @@ export function LandingPage({ signedIn, route }: { signedIn: boolean; route: str
                 </div>
             </section>
             <section className="steps-section"><div><span className="overline">A SIMPLE START</span><h2>From connected<br />to <em>in control.</em></h2><a className="text-link" href="#/signup">Let’s set up your store ↗</a></div><ol>{[['Make yourself at home', 'Create your account and tell us about your business and first store.'], ['Connect your POS system', 'Securely authorize access with your POS provider. Your credentials stay on the server.'], ['See what needs attention', 'After your first import, explore your catalog and set the stock levels that work for you.']].map(([title, body], index) => <li key={title}><span>0{index + 1}</span><div><h3>{title}</h3><p>{body}</p></div></li>)}</ol></section>
-            <section className="product-faq" aria-labelledby="faq-title">
-                <span className="overline">BEFORE YOU CONNECT</span><h2 id="faq-title">A few useful answers.</h2>
-                <details><summary>What do I need to get started?</summary><p>Create an account, then set your store’s region, timezone and currency. You can add manual products right away. Connecting POS requires an authorized account with a supported POS provider and a configured Splynt integration. Contact us if you need help getting connected.</p></details>
-                <details><summary>Does Splynt change my POS inventory?</summary><p>The connection reads your POS catalog and stock. Change stock in your POS system; Splynt refreshes its view on the next successful sync. Reorder targets in Splynt help you plan purchases, but do not place orders or change POS balances.</p></details>
-                <details><summary>How do I know my stock is up to date?</summary><p>Your workspace shows the last completed import and any sync problems. Missing or unsupported balances appear as unknown instead of zero. You can review affected products and request another sync. Automatic imports require the server to be running; sleeping free hosting pauses them. Use Sync now when you need a fresh view.</p></details>
-            </section>
+            <section className="future-note"><span className="pill-label">On the horizon</span><h2>Better decisions start<br />with better information.</h2><p>We’re building toward sales insights that account for timing, season, and store location. Inventory visibility is the first step. We’ll clearly show what’s supported by your data as those tools become available.</p></section>
             <section className="contact-section" id="contact"><div><span className="overline">LET’S TALK SHOP</span><h2>Tell us about<br /><em>your store.</em></h2><p>Want a walkthrough, have a question, or see something we could do better? Leave a note for the Splynt team.</p><span className="contact-aside">Built around real stores.<br />Shaped by conversations like yours.</span></div>
                 <form className="contact-form form-stack" onSubmit={contact}>
                     {sent ? <div className="contact-success" role="status"><span>✓</span><h3>Your note has been saved.</h3><p>Your inquiry is stored for follow-up. This confirmation does not mean an email notification has been delivered.</p><button className="button secondary" type="button" onClick={() => setSent(false)}>Send another note</button></div> : <>
