@@ -1,4 +1,4 @@
-import { providerCopy } from "./providerCopy";
+import { providerCopy } from "./providerCopy.ts";
 import type {
     Account,
     InventoryMovement,
