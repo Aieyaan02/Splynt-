@@ -151,3 +151,16 @@ th { font-weight:500; font-size:9px; background:#f6f8f1; }td { font-size:12px; p
 .auth-card .mobile-brand { align-items:center; }
 .auth-card .auth-back { display:block; }
 @media(max-width:480px) { .auth-card .two-columns { grid-template-columns:minmax(0,1fr); }.auth-form-side { padding:16px; }.auth-card { padding:22px 18px; } }
+.reorder-editor { margin:20px 0; padding:20px; background:#f7f9f2; border:1px solid var(--border); border-radius:12px; }
+.reorder-editor fieldset { border:0; padding:0; min-width:0; }
+.reorder-editor legend { font-weight:600; margin-bottom:18px; }
+.reorder-editor label { display:grid; gap:8px; font-size:13px; }
+.reorder-editor input,.reorder-editor textarea { padding:10px; border:1px solid #bdcbb3; border-radius:6px; max-width:100%; min-width:0; }
+.reorder-editor td input { width:110px; }
+.reorder-editor textarea { margin-bottom:16px; }
+.draft-list { display:grid; gap:16px; }
+.draft-list article { padding:20px; border:1px solid var(--border); border-radius:10px; }
+.draft-list h3 { margin:0 0 7px; font-size:16px; }
+.draft-list details { margin:16px 0; font-size:13px; line-height:1.7; overflow-wrap:anywhere; }
+.draft-list summary { cursor:pointer; }
+.draft-barcode { display:block; color:var(--muted); margin-top:5px; }

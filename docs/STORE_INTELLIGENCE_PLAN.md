@@ -17,10 +17,14 @@ Branch: `feature/store-intelligence`. Not merged into `pilot` or `main`; no depl
 - Backend unchanged from the pilot audit: 227 tests passed with simulated providers/local H2. No live AI request, merchant import or PostgreSQL migration was performed locally.
 - Visual review remains pending in the owner's browser; saved browser permissions prevented automated review.
 
+## Saved reorder work now implemented
+
+Store-scoped persistent drafts with editable pack quantities, supplier/contact fields, immutable ordered status and retry/concurrency protection are implemented. See REORDER_DRAFTS.md for limits and verification. Supplier fields are per draft; reusable defaults remain future work.
+
 ## What to build next, in order
 
 1. Review the CSV with the owner and add supplier, pack-size and lead-time fields only when their ordering process is known. Keep calculations explainable and user editable.
-2. Add a saved reorder draft with an explicit checked/ordered state. It must never silently write POS quantities or send supplier orders.
+2. Review the saved draft workflow with the owner; next add reusable supplier and per-product pack-size defaults. Receiving and partial deliveries need a separate design.
 3. Test actual authorized sales import and historical coverage after approval, with clear missing-period indicators and quantity-unit checks.
 4. Validate advice against controlled fixtures and actual store evidence. Preserve evidence links, cooldowns, strict output validation and uncertainty labels.
 5. Before any live AI use, agree on a provider and spending policy. The current free-only constraint means no paid API calls, keys or automatic provider enablement.

@@ -1,3 +1,4 @@
+import { ReorderDrafts } from "./ReorderDrafts";
 import { InsightsPanel } from "./InsightsPanel";
 import { AdvicePanel } from "./AdvicePanel";
 import { downloadReorderCsv } from "../lib/reorderExport";
@@ -508,6 +509,7 @@ export function Dashboard({
                     />
                 </section>
 
+                {selectedStoreId !== null && <ReorderDrafts key={`drafts-${selectedStoreId}`} storeId={selectedStoreId} products={products} canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"} />}
                 {import.meta.env.VITE_STORE_INTELLIGENCE_ENABLED === "true" && selectedStoreId !== null && <div key={`intelligence-${selectedStoreId}`}>
                     <InsightsPanel storeId={selectedStoreId} />
                     <AdvicePanel storeId={selectedStoreId} canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"} />

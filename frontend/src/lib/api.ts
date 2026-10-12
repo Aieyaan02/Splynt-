@@ -343,3 +343,12 @@ export const recoveryApi = {
         return request("/api/auth/email-verification/confirm", { method: "POST", body: JSON.stringify({ token }) }, false);
     }
 };
+
+export interface ReorderItem { productId: number; name: string; barcode: string; unit: string; packs: number; unitsPerPack: number; quantity: number; }
+export interface ReorderDraft { id: string; version: number; supplier: string; supplierContact: string; notes: string; status: "DRAFT" | "ORDERED"; createdAt: string; updatedAt: string; orderedAt: string | null; items: ReorderItem[]; }
+export interface ReorderInput { requestId: string; version: number; supplier: string; supplierContact: string; notes: string; items: {productId: number; packs: number; unitsPerPack: number}[]; }
+export const reorderApi = {
+    list(storeId: number): Promise<ReorderDraft[]> { return request(`/api/stores/${storeId}/reorder-drafts`); },
+    save(storeId: number, input: ReorderInput, id?: string): Promise<ReorderDraft> { return request(`/api/stores/${storeId}/reorder-drafts${id ? `/${id}` : ""}`, {method: id ? "PUT" : "POST", body: JSON.stringify(input)}); },
+    ordered(storeId: number, draft: ReorderDraft): Promise<ReorderDraft> { return request(`/api/stores/${storeId}/reorder-drafts/${draft.id}/ordered`, {method: "POST", body: JSON.stringify({version: draft.version})}); }
+};
