@@ -9,6 +9,19 @@ public class ContactInquiry {
     @Column(length = 150) private String business;
     @Column(nullable = false, length = 3000) private String message;
     @Column(name = "created_at", nullable = false) private OffsetDateTime createdAt;
+    @Column(name = "notification_state", nullable = false, length = 16) private String notificationState = "PENDING";
+    @Column(name = "notification_attempts", nullable = false) private int notificationAttempts;
+    @Column(name = "notification_available_at", nullable = false) private OffsetDateTime notificationAvailableAt = OffsetDateTime.now();
+    public String getNotificationState() { return notificationState; }
+    public int getNotificationAttempts() { return notificationAttempts; }
+    public OffsetDateTime getNotificationAvailableAt() { return notificationAvailableAt; }
+    boolean notificationReady(OffsetDateTime now) { return "PENDING".equals(notificationState) && !notificationAvailableAt.isAfter(now); }
+    void notificationAccepted() { notificationAttempts++; notificationState = "ACCEPTED"; }
+    void notificationFailed(OffsetDateTime now) {
+        notificationAttempts++;
+        if (notificationAttempts >= 5) notificationState = "FAILED";
+        else notificationAvailableAt = now.plusMinutes(1L << notificationAttempts);
+    }
     protected ContactInquiry() {}
     public ContactInquiry(String name, String email, String business, String message) {
         this.name = name.trim(); this.email = email.trim().toLowerCase(java.util.Locale.ROOT);
