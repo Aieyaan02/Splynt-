@@ -1,7 +1,5 @@
 import { PasswordDialog } from "./PasswordDialog";
-import { AdvicePanel } from "./AdvicePanel";
 import { StoreSettingsDialog } from "./StoreSettingsDialog";
-import { InsightsPanel } from "./InsightsPanel";
 import { ProductDetailsDialog } from "./ProductDetailsDialog";
 import { Brand } from "./Brand";
 import { CloverAutoSync } from "./CloverAutoSync";
@@ -73,7 +71,6 @@ export function Dashboard({
 
     const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
     const [storeDialog, setStoreDialog] = useState<{ id: number | null } | null>(null);
-    const [storeRevision, setStoreRevision] = useState(0);
 
     const [connectionResult, setConnectionResult] = useState(() =>
         new URLSearchParams(window.location.search).get("clover"));
@@ -764,8 +761,6 @@ export function Dashboard({
                     )}
                 </section>
 
-                {selectedStoreId !== null && <AdvicePanel key={`advice-${selectedStoreId}-${storeRevision}`} storeId={selectedStoreId} canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"} />}
-                {selectedStoreId !== null && <InsightsPanel key={`${selectedStoreId}-${storeRevision}`} storeId={selectedStoreId} />}
                 <section
                     id="archived-products-section"
                     className="content-card"
@@ -889,7 +884,7 @@ export function Dashboard({
                     requestGeneration.current++;
                     if (id !== selectedStoreId) { setProducts([]); setArchivedProducts([]); }
                     setInventorySelection(null); setProductDialogOpen(false); setDetailProduct(null);
-                    activeStoreId.current = id; setSelectedStoreId(id); setStoreRevision(current => current + 1);
+                    activeStoreId.current = id; setSelectedStoreId(id);
                 }} />}
             {detailProduct && selectedStoreId !== null && <ProductDetailsDialog
                 key={`${selectedStoreId}-${detailProduct.id}`}

@@ -22,10 +22,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Real application services/security/database; only the external Clover server is simulated. */
-@SpringBootTest
+@SpringBootTest(properties = "splynt.sales.enabled=false")
 class StoreOnboardingAcceptanceTest {
     static final String MERCHANT = "acceptance-" + UUID.randomUUID();
     static final HttpServer provider;
+    static final java.util.concurrent.atomic.AtomicInteger orderRequests = new java.util.concurrent.atomic.AtomicInteger();
     static volatile int quantity = 2;
     static volatile boolean failStocks;
     static {
@@ -33,6 +34,7 @@ class StoreOnboardingAcceptanceTest {
             provider = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
             provider.createContext("/", exchange -> {
                 String path = exchange.getRequestURI().getPath();
+                if (path.endsWith("/orders")) orderRequests.incrementAndGet();
                 String body;
                 int status = 200;
                 if (path.equals("/oauth/v2/token")) {
@@ -146,5 +148,9 @@ class StoreOnboardingAcceptanceTest {
         assertTrue(history.stream().allMatch(m -> m.getMovementType() == com.aieyaan.splynt.inventory.InventoryMovementType.ADJUSTMENT));
         assertTrue(history.stream().allMatch(m -> m.getExternalReference() == null));
         mvc.perform(get(products)).andExpect(status().isUnauthorized());
+        assertEquals(0, orderRequests.get(), "Inventory-only sync must never request sales data");
+        assertTrue(context.getBeansOfType(com.aieyaan.splynt.advice.AdviceController.class).isEmpty());
+        assertTrue(context.getBeansOfType(com.aieyaan.splynt.insights.InsightsController.class).isEmpty());
+        assertTrue(context.getBeansOfType(com.aieyaan.splynt.insights.CloverSalesBackfillController.class).isEmpty());
     }
 }

@@ -67,11 +67,11 @@ export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAut
         <p className="clover-sync-status">
             {connection === null ? "Checking store connection…" : connection.connected
                 ? connection.lastSyncedAt
-                    ? `Clover connected · Updated ${new Date(connection.lastSyncedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-                    : "Clover connected · Your first inventory import will begin shortly."
+                    ? `Clover connected · Updated ${new Date(connection.lastSyncedAt).toLocaleString()}`
+                    : "Clover connected · Use Sync now to import your inventory."
                 : "Connect Clover to bring your inventory into Splynt."}
         </p>
-        {connection?.connected && <small>Inventory refreshes automatically, even when you close Splynt.</small>}
+        {connection?.connected && <small>Automatic refresh requires the server to be running. Use Sync now to request fresh inventory.</small>}
         {canManage && <div className="table-actions">
             <button type="button" className="button secondary compact" disabled={busy || !connection} onClick={() => void connect()}>
                 {busy ? "Working…" : connection?.connected ? "Reconnect Clover" : "Connect Clover"}

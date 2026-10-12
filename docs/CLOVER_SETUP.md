@@ -1,5 +1,7 @@
 # Clover connection setup (development / staging)
 
+> Current release scope: inventory-only pilot. Sales/history/AI are deferred and disabled by default. Start with INVENTORY_PILOT.md, INVENTORY_PILOT_HOSTING.md and CLOVER_PILOT_SUBMISSION.md. Sales sections below document deferred implementation, not pilot functionality.
+
 Use branch `dev/splynt-platform` in a separate Render service with a separate PostgreSQL database. Do not point development at the production database. Existing production remains on its current branch and deployment.
 
 ## Environment

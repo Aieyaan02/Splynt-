@@ -258,6 +258,9 @@ export const inventoryApi = {
     }
 };
 export interface CloverConnection {
+    salesCoverageStart: string | null;
+    salesBackfillTarget: string | null;
+    salesBackfillError: string | null;
     connected: boolean;
     merchantId: string | null;
     lastSyncedAt: string | null;
@@ -267,6 +270,8 @@ export interface CloverConnection {
 }
 
 export const cloverApi = {
+    requestHistory(storeId: number): Promise<void> { return request(`/api/stores/${storeId}/integrations/clover/history`, { method: "POST" }); },
+    cancelHistory(storeId: number): Promise<void> { return request(`/api/stores/${storeId}/integrations/clover/history`, { method: "DELETE" }); },
     status(storeId: number): Promise<CloverConnection> {
         return request(`/api/stores/${storeId}/integrations/clover`);
     },

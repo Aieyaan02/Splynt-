@@ -12,9 +12,13 @@ public class CloverSyncJobs {
     private final CloverOAuthCredentialRepository credentials;
     private final TransactionTemplate transactions;
     private final com.aieyaan.splynt.insights.CloverSalesSyncService sales;
+    private final com.aieyaan.splynt.insights.CloverSalesBackfillService backfill;
+    @org.springframework.beans.factory.annotation.Value("${splynt.sales.enabled:false}")
+    private boolean salesEnabled;
+
     public CloverSyncJobs(CloverInventorySyncService sync, CloverOAuthCredentialRepository credentials,
-            PlatformTransactionManager transactionManager, com.aieyaan.splynt.insights.CloverSalesSyncService sales) {
-        this.sync = sync; this.credentials = credentials; this.sales = sales;
+            PlatformTransactionManager transactionManager, com.aieyaan.splynt.insights.CloverSalesSyncService sales, com.aieyaan.splynt.insights.CloverSalesBackfillService backfill) {
+        this.sync = sync; this.credentials = credentials; this.sales = sales; this.backfill = backfill;
         this.transactions = new TransactionTemplate(transactionManager);
     }
     public CloverSyncResponse run(Long storeId) {
@@ -23,10 +27,18 @@ public class CloverSyncJobs {
             transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId).ifPresent(connection -> {
                 connection.recordInventoryReview(result);
             }));
-            try { sales.synchronize(storeId); }
-            catch (RuntimeException salesFailure) {
-                transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId)
-                        .ifPresent(connection -> connection.markSalesFailed()));
+            if (salesEnabled) {
+                try { sales.synchronize(storeId); }
+                catch (RuntimeException salesFailure) {
+                    transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId)
+                            .ifPresent(connection -> connection.markSalesFailed()));
+                }
+                try { backfill.step(storeId); }
+                catch (RuntimeException backfillFailure) {
+                    transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId)
+                            .filter(connection -> connection.getSalesBackfillTarget() != null)
+                            .ifPresent(connection -> connection.failSalesBackfill()));
+                }
             }
             return result;
         } catch (RuntimeException failure) {

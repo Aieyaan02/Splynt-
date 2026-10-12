@@ -93,6 +93,14 @@ public class CloverInventoryClient {
         return result;
     }
 
+    public JsonNode getOrdersCreatedBetween(Long storeId, long fromInclusive, long untilExclusive) {
+        if (fromInclusive < 0 || untilExclusive <= fromInclusive
+                || untilExclusive - fromInclusive > java.time.Duration.ofDays(30).toMillis())
+            throw new IllegalArgumentException("Historical sales requests must span at most 30 days");
+        return getAllPages(storeId, "/v3/merchants/{merchantId}/orders?filter=createdTime>="
+                + fromInclusive + "&filter=createdTime<" + untilExclusive);
+    }
+
     public JsonNode getOrderLines(Long storeId, String orderId) {
         if (!orderId.matches("[A-Za-z0-9_-]{1,64}")) throw new IllegalStateException("Invalid Clover order identifier");
         return getAllPages(storeId, "/v3/merchants/{merchantId}/orders/" + orderId + "/line_items");

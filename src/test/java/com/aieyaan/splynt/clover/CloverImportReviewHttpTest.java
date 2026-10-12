@@ -93,4 +93,23 @@ class CloverImportReviewHttpTest {
                 .andExpect(jsonPath("$.message").value("Inventory could not be refreshed. Retry, or reconnect Clover if access expired."));
     }
 
+    @Test void ownerCanRequestAndCancelHistoricalImport() throws Exception {
+        mvc.perform(post(path() + "/history").with(jwt().jwt(j -> j.subject(owner.getId().toString()))))
+                .andExpect(status().isAccepted());
+        mvc.perform(get(path()).with(jwt().jwt(j -> j.subject(owner.getId().toString()))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.salesBackfillTarget").isNotEmpty());
+        mvc.perform(delete(path() + "/history").with(jwt().jwt(j -> j.subject(owner.getId().toString()))))
+                .andExpect(status().isNoContent());
+        assertNull(credentials.findByStoreId(store.getId()).orElseThrow().getSalesBackfillTarget());
+    }
+    @Test void employeeCannotRequestHistoricalImport() throws Exception {
+        memberships.findByOrganizationIdAndUserIdAndActiveTrue(store.getOrganization().getId(), owner.getId())
+                .orElseThrow().changeRole(MembershipRole.EMPLOYEE);
+        memberships.flush();
+        mvc.perform(post(path() + "/history").with(jwt().jwt(j -> j.subject(owner.getId().toString()))))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete(path() + "/history").with(jwt().jwt(j -> j.subject(owner.getId().toString()))))
+                .andExpect(status().isForbidden());
+    }
+
 }

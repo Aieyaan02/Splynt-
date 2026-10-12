@@ -25,12 +25,17 @@ public class CloverSalesSyncService {
     public void synchronize(Long storeId) {
         stores.findLockedById(storeId).filter(s -> s.isActive()).orElseThrow();
         var connection = credentials.findByStoreId(storeId).orElseThrow();
-        OffsetDateTime started = OffsetDateTime.now();
+        OffsetDateTime started = OffsetDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
         OffsetDateTime coverage = connection.getSalesCoverageStart() == null ? started.minusDays(90) : connection.getSalesCoverageStart();
         OffsetDateTime cursor = connection.getSalesSyncedAt() == null ? coverage : connection.getSalesSyncedAt().minusMinutes(5);
         if (connection.getSalesRetryFrom() != null && connection.getSalesRetryFrom().isBefore(cursor))
             cursor = connection.getSalesRetryFrom();
         JsonNode orders = client.getOrdersModifiedSince(storeId, cursor.toInstant().toEpochMilli()).path("elements");
+        int skipped = importOrders(storeId, orders, coverage, started);
+        connection.recordSalesRetry(cursor, skipped > 0);
+        connection.markSalesSynchronized(started, coverage, skipped);
+    }
+    int importOrders(Long storeId, JsonNode orders, OffsetDateTime coverage, OffsetDateTime started) {
         if (!orders.isArray()) throw new IllegalStateException("Invalid Clover orders response");
         int skipped = 0;
         for (JsonNode order : orders) {
@@ -60,8 +65,7 @@ public class CloverSalesSyncService {
                 sales.save(new SalesEvent(storeId, product.get().getId(), id, lineId, units, occurred, quantityUnit(line)));
             }
         }
-        connection.recordSalesRetry(cursor, skipped > 0);
-        connection.markSalesSynchronized(started, coverage, skipped);
+        return skipped;
     }
     static String quantityUnit(JsonNode line) {
         String unit = line.path("unitName").asText("").trim().toLowerCase(java.util.Locale.ROOT);

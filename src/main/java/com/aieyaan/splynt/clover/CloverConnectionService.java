@@ -91,8 +91,8 @@ public class CloverConnectionService {
 
     public ConnectionStatus status(Long storeId) {
         return credentials.findByStoreId(storeId)
-                .map(c -> new ConnectionStatus(true, c.getMerchantId(), c.getLastSyncedAt(), c.getLastSyncError(), c.getInventoryIssueCount(), c.getInventoryIssues()))
-                .orElse(new ConnectionStatus(false, null, null, null, 0, java.util.List.of()));
+                .map(c -> new ConnectionStatus(true, c.getMerchantId(), c.getLastSyncedAt(), c.getLastSyncError(), c.getInventoryIssueCount(), c.getInventoryIssues(), c.getSalesCoverageStart(), c.getSalesBackfillTarget(), c.getSalesBackfillError()))
+                .orElse(new ConnectionStatus(false, null, null, null, 0, java.util.List.of(), null, null, null));
     }
-    public record ConnectionStatus(boolean connected, String merchantId, OffsetDateTime lastSyncedAt, String lastSyncError, int issueCount, java.util.List<com.aieyaan.splynt.clover.dto.CloverImportIssue> issues) {}
+    public record ConnectionStatus(boolean connected, String merchantId, OffsetDateTime lastSyncedAt, String lastSyncError, int issueCount, java.util.List<com.aieyaan.splynt.clover.dto.CloverImportIssue> issues, OffsetDateTime salesCoverageStart, OffsetDateTime salesBackfillTarget, String salesBackfillError) {}
 }

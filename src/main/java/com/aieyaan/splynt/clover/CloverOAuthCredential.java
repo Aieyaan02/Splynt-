@@ -33,6 +33,22 @@ public class CloverOAuthCredential {
     @Column(name = "sales_coverage_start") private OffsetDateTime salesCoverageStart;
     @Column(name = "sales_sync_error", length = 255) private String salesSyncError;
     @Column(name = "sales_retry_from") private OffsetDateTime salesRetryFrom;
+    @Column(name = "sales_backfill_target") private OffsetDateTime salesBackfillTarget;
+    @Column(name = "sales_backfill_error", length = 255) private String salesBackfillError;
+    public OffsetDateTime getSalesBackfillTarget() { return salesBackfillTarget; }
+    public String getSalesBackfillError() { return salesBackfillError; }
+    public void requestSalesBackfill(OffsetDateTime target) {
+        if (salesCoverageStart != null && !salesCoverageStart.isAfter(target)) return;
+        if (salesBackfillTarget == null || target.isBefore(salesBackfillTarget)) salesBackfillTarget = target;
+        salesBackfillError = null;
+    }
+    public void cancelSalesBackfill() { salesBackfillTarget = null; salesBackfillError = null; }
+    public void completeSalesBackfillStep(OffsetDateTime coverage) {
+        if (salesCoverageStart == null || coverage.isBefore(salesCoverageStart)) salesCoverageStart = coverage;
+        salesBackfillError = null;
+        if (salesBackfillTarget != null && !salesCoverageStart.isAfter(salesBackfillTarget)) salesBackfillTarget = null;
+    }
+    public void failSalesBackfill() { salesBackfillError = "Older sales could not be imported. Check Clover permissions, catalog matches and supported quantities, then retry."; }
     public OffsetDateTime getSalesRetryFrom() { return salesRetryFrom; }
     public void recordSalesRetry(OffsetDateTime cursor, boolean unresolved) {
         salesRetryFrom = unresolved ? cursor : null;

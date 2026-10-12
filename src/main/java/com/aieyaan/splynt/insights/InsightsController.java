@@ -1,6 +1,7 @@
 package com.aieyaan.splynt.insights;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "splynt.sales.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/stores/{storeId}/insights")
 @PreAuthorize("@storeAuthorizationService.canAccess(authentication, #storeId)")
