@@ -1,3 +1,5 @@
+import { intelligenceReadiness } from "../lib/intelligenceReadiness";
+import { providerCopy } from "../lib/providerCopy";
 import { HistoricalSales } from "./HistoricalSales";
 import { useEffect, useState } from "react";
 import { insightsApi, type SalesInsights } from "../lib/api";
@@ -17,7 +19,8 @@ export function InsightsPanel({ storeId }: { storeId: number }) {
         {error && <p role="alert" className="message error-message">{error}</p>}
         {!data && !error ? <p>Loading sales insights…</p> : data && <>
             <p className="detail-info">{data.storeName} · {data.location || "Location not set"} · {data.timezone}</p>
-            {data.syncError && <p className="message error-message" role="status">{data.syncError}</p>}
+            {data.syncError && <p className="message error-message" role="status">{providerCopy(data.syncError)}</p>}
+            <div className="intelligence-readiness"><h3>Ready for useful recommendations?</h3><p>These checks use imported store records. No sample sales are added to fill gaps.</p><ul>{intelligenceReadiness(data).map(check => <li key={check.label}><span aria-hidden="true">{check.ready ? "✓" : "○"}</span><div><strong>{check.label} · {check.ready ? "Ready" : "Needed"}</strong><small>{check.detail}</small></div></li>)}</ul></div>
             {!data.lastSyncedAt ? <div className="empty-state"><h3>Let’s learn your store’s rhythm.</h3><p>Connect your POS system with order-read permission. After sales history imports, your product and timing insights will appear here.</p></div> : <>
                 <p className="detail-info">Last successful sales import: {new Date(data.lastSyncedAt).toLocaleString(undefined, { timeZone: data.timezone })} ({data.timezone}). Analysis ends before {data.untilExclusive}; later days are not counted as zero sales.</p>
                 <div className="insight-summary"><div><strong>{data.summary.orders}</strong><span>paid orders</span></div><div><strong>{data.summary.completeDays}</strong><span>complete days analyzed</span></div></div>

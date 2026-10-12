@@ -1,3 +1,4 @@
+import { providerCopy } from "../lib/providerCopy";
 import { HistoricalSales } from "./HistoricalSales";
 import type { SalesInsights } from "../lib/api";
 import { useEffect, useRef, useState } from "react";
@@ -8,6 +9,7 @@ export function AdvicePanel({ storeId, canManage }: { storeId: number; canManage
     const [data, setData] = useState<AdviceView | null>(null);
     const [error, setError] = useState("");
     const [busy, setBusy] = useState(false);
+    const [consent, setConsent] = useState(false);
     useEffect(() => {
         let cancelled = false;
         const load = async () => {
@@ -20,6 +22,7 @@ export function AdvicePanel({ storeId, canManage }: { storeId: number; canManage
         return () => { cancelled = true; window.clearInterval(timer); };
     }, [storeId]);
     async function generate() {
+        if (!consent || !data?.canGenerate || !canManage || generating.current) return;
         generating.current = true; generation.current++;
         setBusy(true); setError("");
         try { setData(await adviceApi.generate(storeId)); }
@@ -34,9 +37,9 @@ export function AdvicePanel({ storeId, canManage }: { storeId: number; canManage
         {error && <p role="alert" className="message error-message">{error}</p>}
         {!data && !error && <p>Loading recommendations…</p>}
         {data && <>
-            {data.message && <p role="status" className="detail-info">{data.message}</p>}
+            {data.message && <p role="status" className="detail-info">{providerCopy(data.message)}</p>}
             {data.error && <p role="alert" className="message error-message">{data.error}</p>}
-            {canManage && data.configured && <div className="advice-controls"><p>Generating sends this store’s leading product names, aggregate sales, city/region, and timezone to the configured AI provider. Customer information and POS credentials are excluded.</p><button className="button primary" disabled={!data.canGenerate || busy} onClick={() => void generate()}>{busy ? "Analyzing your store…" : data.report ? "Generate updated report" : "Generate recommendations"}</button>{data.nextGenerationAt && <small>Next generation available: {new Date(data.nextGenerationAt).toLocaleString()}</small>}</div>}
+            {canManage && data.configured && <div className="advice-controls"><p>Generating sends this store’s leading product names, aggregate sales, city/region, and timezone to the configured AI provider. Customer information and POS credentials are excluded. Provider usage may incur charges when enabled.</p><label className="ai-consent"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} /> I agree to send this store’s summary for this session.</label><button className="button primary" disabled={!consent || !data.canGenerate || busy} onClick={() => void generate()}>{busy ? "Analyzing your store…" : data.report ? "Generate updated report" : "Generate recommendations"}</button>{data.nextGenerationAt && <small>Next generation available: {new Date(data.nextGenerationAt).toLocaleString()}</small>}</div>}
             {!canManage && !data.report && <p className="detail-info">Your owner or admin can generate a report when enough sales data is available.</p>}
             {data.report && <div className="advice-report"><p className="detail-info">Generated {data.generatedAt ? new Date(data.generatedAt).toLocaleString() : "previously"} · {data.model}. This saved report reflects its attached data snapshot, not live stock.</p><p>{data.report.summary}</p>
                 <h3>Actions to consider</h3><div className="advice-grid">{data.report.actions.map((action, index) => <article key={index}><h4>{action.title}</h4><p>{action.rationale}</p><p><strong>Next step:</strong> {action.nextStep}</p>{sources(action.evidenceIds)}</article>)}</div>

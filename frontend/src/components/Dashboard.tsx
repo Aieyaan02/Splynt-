@@ -1,3 +1,6 @@
+import { InsightsPanel } from "./InsightsPanel";
+import { AdvicePanel } from "./AdvicePanel";
+import { downloadReorderCsv } from "../lib/reorderExport";
 import { PasswordDialog } from "./PasswordDialog";
 import { StoreSettingsDialog } from "./StoreSettingsDialog";
 import { ProductDetailsDialog } from "./ProductDetailsDialog";
@@ -505,6 +508,11 @@ export function Dashboard({
                     />
                 </section>
 
+                {import.meta.env.VITE_STORE_INTELLIGENCE_ENABLED === "true" && selectedStoreId !== null && <div key={`intelligence-${selectedStoreId}`}>
+                    <InsightsPanel storeId={selectedStoreId} />
+                    <AdvicePanel storeId={selectedStoreId} canManage={selectedStore?.role === "OWNER" || selectedStore?.role === "ADMIN"} />
+                </div>}
+
                 <section
                     id="low-stock-section"
                     className="content-card"
@@ -521,12 +529,13 @@ export function Dashboard({
                             <p>Suggestions refill each item to your target. They do not place orders.</p>
                         </div>
 
+                        <div className="section-actions"><button type="button" className="button secondary compact" disabled={loading || selectedStoreId === null || lowStockProducts.length === 0} onClick={() => { if (selectedStoreId !== null && selectedStore) downloadReorderCsv(products, selectedStoreId, selectedStore.name); }}>Export reorder list ↓</button>
                         <span className="badge warning-badge">
                             {lowStockProducts.length}{" "}
                             {lowStockProducts.length === 1
                                 ? "item"
                                 : "items"}
-                        </span>
+                        </span></div>
                     </div>
 
                     {loading ? (
