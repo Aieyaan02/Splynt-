@@ -200,9 +200,8 @@ export function AuthPage({
             <section className="auth-form-side">
                 <div className="auth-card">
                     <a href="#/" className="auth-back">← Back to Splynt</a>
-                    <div className="mobile-brand brand">
-                        <span className="brand-mark">S</span>
-                        <span>Splynt</span>
+                    <div className="mobile-brand">
+                        <Brand />
                     </div>
 
                     <div className="auth-tabs">
@@ -387,7 +386,7 @@ export function AuthPage({
                                 />
 
                                 <small>
-                                    Use at least 10 characters. Emoji and some letters count toward the limit faster.
+                                    Use at least 10 characters.
                                 </small>
                             </label>
 
