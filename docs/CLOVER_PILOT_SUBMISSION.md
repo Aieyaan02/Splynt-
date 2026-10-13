@@ -1,5 +1,7 @@
 # Clover inventory pilot submission preparation
 
+Updated audit and submission package (2026-10-13): see [readiness and blockers](clover-review/READINESS.md), [submission copy](clover-review/SUBMISSION_COPY.md), and [video script](clover-review/VIDEO_SCRIPT.md). These supersede older readiness assumptions below.
+
 Status: draft for owner review, not submitted or approved. Scope: one real shop, inventory reads and threshold-based reorder planning. Existing sample deployment stays unchanged.
 
 ## Suggested app description
@@ -19,7 +21,7 @@ The application uses server-side token exchange, encrypted stored tokens, single
 ## Reviewer walkthrough to record after deployment
 
 1. Register a Splynt business and store, sign in, set the store currency to match Clover.
-2. Choose Connect Clover and authorize the intended test merchant through Clover.
+2. Choose Connect POS and authorize the intended test merchant through Clover.
 3. Choose Sync now. Compare representative product names, quantities and categories against Clover.
 4. Set a product threshold and target. With quantity 2, threshold 5, and target 20, verify a suggested reorder of 18.
 5. Update a test merchant's stock in Clover and sync again. Confirm the new quantity and alert state.
@@ -31,7 +33,7 @@ Do not record credentials or tokens. Use reviewer/test accounts and the merchant
 
 ## Owner information still required
 
-- Shop country and production developer account approval status; whether the production app already exists.
+- Country confirmed: United States (Miami Beach). Production developer verification last reported pending; confirm current status and whether a production app exists.
 - Hosting choice/account access; final HTTPS application URL and callback URL.
 - Clover app ID/secret placed directly into hosting secrets, plus merchant authorization performed by the owner.
 - Legal operator/business name, monitored support email, privacy-policy and terms URLs, and a decision on retention/deletion procedures. Do not invent these or submit placeholder policies.
