@@ -19,6 +19,7 @@ Private web app for one US merchant/location. Read-only inventory import, low/un
 | Sync and recommendations | Paginated import and threshold/target calculation; tenant tests in existing suite | Automated evidence exists; compare representative catalog in Clover UI before recording |
 | Disconnect / uninstall | No disconnect endpoint or UI found in source | BLOCKER: implement local credential removal, stop future syncs, handle uninstall/revocation, specify retained-data behavior; do not promise remote revocation unless implemented and tested |
 | Data deletion / retention | No complete merchant-account deletion workflow found | BLOCKER: define and implement verified deletion, dependent records, backups and retention before publishing policy |
+| PostgreSQL release check | Latest checked CI failed because MFA timestamp mapping differed between H2 and PostgreSQL; explicit JDBC temporal mapping fix prepared | Must pass PostgreSQL CI and container build before release |
 | Admin security | MFA/throttling/audit code on pilot; local enrollment still unconfirmed | Finish owner enrollment and latest CI review; no claim of MFA activation based solely on code |
 | Support / recovery | Contact form saves requests; email delivery disabled | Confirm monitored channel and workable reviewer onboarding/recovery; no promise of email notifications |
 | Public privacy / terms | No published policy pages found | Owner identity, support contact, actual retention and hosting must be settled first |

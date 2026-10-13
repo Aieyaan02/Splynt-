@@ -29,7 +29,7 @@ public class PlatformMfa {
  public record Result(String accessToken,List<String> recoveryCodes){}
  @Transactional public Result verify(long id,long credentialVersion,String code){
   guard(id,credentialVersion);
-  var rows=db.queryForList("select secret_ciphertext,enabled,last_step,created_at from platform_mfa where user_id=? for update",id);
+  var rows=db.query("select secret_ciphertext,enabled,last_step,created_at from platform_mfa where user_id=? for update",(rs,n)->Map.<String,Object>of("secret_ciphertext",rs.getString("secret_ciphertext"),"enabled",rs.getBoolean("enabled"),"last_step",rs.getLong("last_step"),"created_at",rs.getObject("created_at",OffsetDateTime.class)),id);
   if(rows.isEmpty())throw invalid();var row=rows.getFirst();boolean enrolled=(Boolean)row.get("enabled");
   if(!enrolled && ((OffsetDateTime)row.get("created_at")).isBefore(OffsetDateTime.now().minusMinutes(10)))throw invalid();
   boolean valid=false;long step=Instant.now().getEpochSecond()/30;
