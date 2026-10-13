@@ -1,7 +1,7 @@
 import {useEffect,useState,type FormEvent} from 'react';
 import {Brand} from '../src/components/Brand';
 import {PlatformAdmin} from './PlatformAdmin';
-import {login,getAccessToken,clearAccessToken,platformApi,ApiRequestError} from './api';
+import {login,getAccessToken,clearAccessToken,platformApi,ApiRequestError} from './monitoringClient';
 import '../src/index.css';
 import '../src/brand.css';
 export function AdminApp(){

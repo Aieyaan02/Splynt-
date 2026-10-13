@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Brand } from "../src/components/Brand";
-import { platformApi, clearAccessToken, ApiRequestError, type PlatformOverview, type PlatformPage, type PlatformStore, type PlatformUser, type PlatformOrganization } from "./api";
+import { platformApi, clearAccessToken, ApiRequestError, type PlatformOverview, type PlatformPage, type PlatformStore, type PlatformUser, type PlatformOrganization } from "./monitoringClient";
 const when = (value:string|null) => value ? new Date(value).toLocaleString() : "Not recorded";
 
 export function PlatformAdmin({onLogout}:{onLogout:()=>void}) {
