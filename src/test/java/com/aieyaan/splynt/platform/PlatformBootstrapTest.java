@@ -37,7 +37,7 @@ class PlatformBootstrapTest {
         var result=mvc.perform(post("/api/auth/login").contentType("application/json").content("{\"email\":\""+email+"\",\"password\":\""+password+"\"}"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String token=new tools.jackson.databind.json.JsonMapper().readTree(result).path("accessToken").asText();
-        mvc.perform(get("/api/platform/overview").header("Authorization","Bearer "+token)).andExpect(status().isOk());
+        mvc.perform(get("/api/platform/overview").header("Authorization","Bearer "+token)).andExpect(status().isForbidden());
         mvc.perform(get("/api/me").header("Authorization","Bearer "+token)).andExpect(status().isOk()).andExpect(jsonPath("$.organizations.length()").value(0));
     }
     @Test void existingAccountIsNeverPromotedByEmail() {

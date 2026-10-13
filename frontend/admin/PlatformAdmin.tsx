@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AuditLog } from "./AuditLog";
 import { Brand } from "../src/components/Brand";
 import { platformApi, clearAccessToken, ApiRequestError, type PlatformOverview, type PlatformPage, type PlatformStore, type PlatformUser, type PlatformOrganization } from "./monitoringClient";
 const when = (value:string|null) => value ? new Date(value).toLocaleString() : "Not recorded";
@@ -47,5 +48,6 @@ export function PlatformAdmin({onLogout}:{onLogout:()=>void}) {
             {organizations && <div className="table-wrapper"><table><thead><tr><th>Organization</th><th>Registered</th><th>Stores</th><th>Active memberships</th><th>Status</th></tr></thead><tbody>{organizations.items.map(o=><tr key={o.id}><td>{o.name} · #{o.id}</td><td>{when(o.registeredAt)}</td><td>{o.stores}</td><td>{o.members}</td><td>{o.active?"Active":"Inactive"}</td></tr>)}</tbody></table></div>}
             {current && <div className="section-actions"><p>{current.total} records · Page {page+1} of {Math.max(1,Math.ceil(current.total/current.size))}</p><button className="button secondary compact" disabled={busy||page===0} onClick={()=>setPage(p=>p-1)}>Previous</button><button className="button secondary compact" disabled={busy||(page+1)*current.size>=current.total} onClick={()=>setPage(p=>p+1)}>Next</button></div>}
         </section>
+        <AuditLog />
     </main>;
 }

@@ -82,6 +82,12 @@ public class PlatformService {
             """,(rs,n) -> new OrganizationRow(rs.getLong("id"),rs.getString("name"),rs.getBoolean("active"),time(rs,"created_at"),rs.getLong("stores"),rs.getLong("members")),page*25);
         return new Page<>(rows,page,25,count("select count(*) from organizations"));
     }
+    public record AuditRow(long id,OffsetDateTime occurredAt,Long actorId,String action,int status) {}
+    public Page<AuditRow> audit(int page) {
+        validate(page);
+        var rows=db.query("select id,occurred_at,actor_id,action,status from security_audit order by id desc limit 25 offset ?",(rs,n)->new AuditRow(rs.getLong("id"),time(rs,"occurred_at"),(Long)rs.getObject("actor_id"),rs.getString("action"),rs.getInt("status")),page*25);
+        return new Page<>(rows,page,25,count("select count(*) from security_audit"));
+    }
     private long count(String sql,Object...args) { return Objects.requireNonNull(db.queryForObject(sql,Long.class,args)); }
     private static OffsetDateTime time(ResultSet rs,String column) throws SQLException { return rs.getObject(column,OffsetDateTime.class); }
     private void validate(int page) { if(page<0 || page>100000) throw new IllegalArgumentException("Invalid page."); }

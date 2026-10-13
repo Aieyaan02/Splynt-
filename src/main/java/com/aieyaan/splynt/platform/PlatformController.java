@@ -11,6 +11,8 @@ public class PlatformController {
     private final PlatformService service;
     public PlatformController(PlatformAccess access,PlatformService service) {this.access=access;this.service=service;}
     @GetMapping("/access") public Map<String,Boolean> access(Authentication authentication) { return Map.of("allowed",access.allowed(authentication)); }
+    @GetMapping("/audit") @PreAuthorize("@platformAccess.allowed(authentication)")
+    public ResponseEntity<PlatformService.Page<PlatformService.AuditRow>> audit(@RequestParam(defaultValue="0") int page) {return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.audit(page));}
     @GetMapping("/overview") @PreAuthorize("@platformAccess.allowed(authentication)")
     public ResponseEntity<PlatformService.Overview> overview() {return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.overview());}
     @GetMapping("/stores") @PreAuthorize("@platformAccess.allowed(authentication)")

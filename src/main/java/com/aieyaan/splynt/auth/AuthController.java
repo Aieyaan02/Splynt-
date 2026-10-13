@@ -19,8 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.aieyaan.splynt.security.AuthenticationLimits limits;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, com.aieyaan.splynt.security.AuthenticationLimits limits) {
+        this.limits=limits;
         this.authService = authService;
     }
 
@@ -38,8 +40,12 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
-            @Valid @RequestBody LoginRequest request
+            @Valid @RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest servlet
     ) {
+        jakarta.servlet.ServletRequest peer=servlet;
+        while(peer instanceof jakarta.servlet.ServletRequestWrapper wrapper) peer=wrapper.getRequest();
+        limits.check("login-ip",peer.getRemoteAddr(),60,15);
+        limits.check("login-account",request.email().trim().toLowerCase(java.util.Locale.ROOT),10,15);
         return ResponseEntity.ok(
                 authService.login(request)
         );

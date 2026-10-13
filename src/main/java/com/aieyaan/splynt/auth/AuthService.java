@@ -34,6 +34,7 @@ public class AuthService {
     private final OrganizationMembershipRepository
             membershipRepository;
     private final PasswordEncoder passwordEncoder;
+    private final String dummyPasswordHash;
     private final JwtTokenService jwtTokenService;
 
     public AuthService(
@@ -49,6 +50,7 @@ public class AuthService {
         this.storeRepository = storeRepository;
         this.membershipRepository = membershipRepository;
         this.passwordEncoder = passwordEncoder;
+        this.dummyPasswordHash=passwordEncoder.encode(java.util.UUID.randomUUID().toString());
         this.jwtTokenService = jwtTokenService;
     }
 
@@ -138,9 +140,10 @@ public class AuthService {
 
         AppUser user = appUserRepository
                 .findByEmailIgnoreCase(normalizedEmail)
-                .orElseThrow(InvalidCredentialsException::new);
+                .orElse(null);
 
-        if (!user.isEnabled()) {
+        if (user == null) {
+            passwordEncoder.matches(request.password(),dummyPasswordHash);
             throw new InvalidCredentialsException();
         }
 
@@ -149,7 +152,7 @@ public class AuthService {
                 user.getPasswordHash()
         );
 
-        if (!passwordMatches) {
+        if (!passwordMatches || !user.isEnabled()) {
             throw new InvalidCredentialsException();
         }
 

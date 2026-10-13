@@ -44,27 +44,27 @@ class PlatformHttpTest {
         for(String endpoint:List.of("overview","stores","users","organizations")) {
             mvc.perform(get("/api/platform/"+endpoint)).andExpect(status().isUnauthorized());
             mvc.perform(get("/api/platform/"+endpoint).with(jwt().jwt(j->j.subject(owner.getId().toString())))).andExpect(status().isForbidden());
-            mvc.perform(get("/api/platform/"+endpoint).with(jwt().jwt(j->j.subject(admin.getId().toString())))).andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"));
+            mvc.perform(get("/api/platform/"+endpoint).with(jwt().jwt(j->j.subject(admin.getId().toString()).claim("platform_mfa",true)))).andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"));
         }
         mvc.perform(get("/api/platform/access").with(jwt().jwt(j->j.subject(owner.getId().toString())))).andExpect(jsonPath("$.allowed").value(false));
     }
     @Test void disabledUnverifiedStaleAndRevokedAdminsAreDenied() throws Exception {
-        var token=jwt().jwt(j->j.subject(admin.getId().toString()));
+        var token=jwt().jwt(j->j.subject(admin.getId().toString()).claim("platform_mfa",true));
         admin.disable();users.saveAndFlush(admin);
         mvc.perform(get("/api/platform/overview").with(token)).andExpect(status().isForbidden());
         admin.enable();admin.changeEmail("changed-"+UUID.randomUUID()+"@example.com");users.saveAndFlush(admin);
-        mvc.perform(get("/api/platform/overview").with(jwt().jwt(j->j.subject(admin.getId().toString()).claim("credential_version",admin.getCredentialVersion())))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/platform/overview").with(jwt().jwt(j->j.subject(admin.getId().toString()).claim("platform_mfa",true).claim("credential_version",admin.getCredentialVersion())))).andExpect(status().isForbidden());
         admin.markEmailVerified();users.saveAndFlush(admin);
         mvc.perform(get("/api/platform/overview").with(token)).andExpect(status().isForbidden());
         db.update("delete from platform_admin");
-        mvc.perform(get("/api/platform/overview").with(jwt().jwt(j->j.subject(admin.getId().toString()).claim("credential_version",admin.getCredentialVersion())))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/platform/overview").with(jwt().jwt(j->j.subject(admin.getId().toString()).claim("platform_mfa",true).claim("credential_version",admin.getCredentialVersion())))).andExpect(status().isForbidden());
     }
     @Test void syncMetricsRetainFailureHistoryWithoutLeakingProviderErrorsOrTokens() throws Exception {
         var connection=new CloverOAuthCredential("merchant-"+UUID.randomUUID(),"PRIVATE_ACCESS_TOKEN","PRIVATE_REFRESH_TOKEN",null,null);
         connection.assignStore(store.getId());connection.markSyncFailed("PRIVATE_PROVIDER_RESPONSE_WITH_CREDENTIAL");
         connection.recordInventoryReview(new CloverSyncResponse("merchant",12,5,6,1,OffsetDateTime.now().plusSeconds(1),0,List.of()));
         credentials.saveAndFlush(connection);
-        String body=mvc.perform(get("/api/platform/stores").with(jwt().jwt(j->j.subject(admin.getId().toString())))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String body=mvc.perform(get("/api/platform/stores").with(jwt().jwt(j->j.subject(admin.getId().toString()).claim("platform_mfa",true)))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertFalse(body.contains("PRIVATE_"));assertFalse(body.contains("merchant-"));assertFalse(body.contains("accessToken"));
         var row=service.stores(0,false).items().stream().filter(s->s.id()==store.getId()).findFirst().orElseThrow();
         assertNotNull(row.lastFailedSync());assertNotNull(row.lastSuccessfulSync());assertEquals(11,row.lastImportedProducts());assertEquals(12,row.lastReceivedProducts());assertEquals("CONNECTED",row.connectionStatus());assertTrue(row.attention().isEmpty());
@@ -78,7 +78,7 @@ class PlatformHttpTest {
         assertFalse(service.stores(0,true).items().stream().anyMatch(s->s.id()==store.getId()));
     }
     @Test void activityIsRecordedAndThrottledAndUserDtoDoesNotExposePasswords() throws Exception {
-        var token=jwt().jwt(j->j.subject(admin.getId().toString()));
+        var token=jwt().jwt(j->j.subject(admin.getId().toString()).claim("platform_mfa",true));
         mvc.perform(get("/api/platform/overview").with(token)).andExpect(status().isOk());
         var first=db.queryForObject("select last_activity_at from app_users where id=?",OffsetDateTime.class,admin.getId());assertNotNull(first);
         String result=mvc.perform(get("/api/platform/users").with(token)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
@@ -90,6 +90,6 @@ class PlatformHttpTest {
         assertEquals(db.queryForObject("select count(*) from app_users",Long.class),service.overview().users());
         for(int i=0;i<27;i++) users.save(new AppUser(UUID.randomUUID()+"@example.com","hash","Test","User"));users.flush();
         assertEquals(25,service.users(0).items().size());assertTrue(service.users(1).items().size()>0);
-        mvc.perform(get("/api/platform/users?page=-1").with(jwt().jwt(j->j.subject(admin.getId().toString())))).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/platform/users?page=-1").with(jwt().jwt(j->j.subject(admin.getId().toString()).claim("platform_mfa",true)))).andExpect(status().isBadRequest());
     }
 }

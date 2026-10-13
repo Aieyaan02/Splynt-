@@ -31,14 +31,21 @@ public class JwtTokenService {
     }
 
     public GeneratedToken generateAccessToken(AppUser user) {
+        return generate(user,false);
+    }
+
+    public GeneratedToken generatePlatformToken(AppUser user) { return generate(user,true); }
+
+    private GeneratedToken generate(AppUser user, boolean mfa) {
         Instant issuedAt = Instant.now();
-        Instant expiresAt = issuedAt.plus(accessTokenTtl);
+        Instant expiresAt = issuedAt.plus(mfa ? Duration.ofMinutes(15) : accessTokenTtl);
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
                 .subject(user.getId().toString())
+                .claim("platform_mfa", mfa)
                 .claim("credential_version", user.getCredentialVersion())
                 .claim("email", user.getEmail())
                 .claim("name", user.getFullName())
@@ -51,7 +58,7 @@ public class JwtTokenService {
         return new GeneratedToken(
                 token,
                 expiresAt,
-                accessTokenTtl.toSeconds()
+                Duration.between(issuedAt, expiresAt).toSeconds()
         );
     }
 

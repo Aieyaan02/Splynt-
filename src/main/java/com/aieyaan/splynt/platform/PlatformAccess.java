@@ -11,6 +11,9 @@ public class PlatformAccess {
     private final JdbcTemplate db;
     public PlatformAccess(JdbcTemplate db) { this.db = db; }
     public boolean allowed(Authentication authentication) {
+        return identity(authentication) && authentication instanceof JwtAuthenticationToken jwt && Boolean.TRUE.equals(jwt.getToken().getClaim("platform_mfa"));
+    }
+    public boolean identity(Authentication authentication) {
         if (!(authentication instanceof JwtAuthenticationToken jwt) || !authentication.isAuthenticated()) return false;
         try {
             Long count = db.queryForObject("""

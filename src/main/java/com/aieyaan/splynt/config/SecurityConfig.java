@@ -22,7 +22,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http)
+    SecurityFilterChain securityFilterChain(HttpSecurity http, org.springframework.jdbc.core.JdbcTemplate db)
             throws Exception {
 
         http
@@ -101,6 +101,7 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(Customizer.withDefaults()));
 
+        http.addFilterAfter(new com.aieyaan.splynt.security.SecurityAuditFilter(db), org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 }
