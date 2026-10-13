@@ -1,6 +1,6 @@
 # Private platform administration
 
-Route: `/#/platform`. Feature branch only; no deployment or live admin account provisioned by this change.
+Route: `/#/platform`. Included in the pilot branch; no deployment or live admin account provisioned by this change.
 
 ## Access model
 
