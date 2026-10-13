@@ -1,6 +1,12 @@
 # Private platform administration
 
-Route: `/#/platform`. Included in the pilot branch; no deployment or live admin account provisioned by this change.
+Separate portal: target `https://admin.splynt.com/`, local `http://127.0.0.1:5174/`. The store frontend no longer provides the platform screen. No public domain or cloud deployment is configured by this change.
+
+## Separate frontend deployment
+
+Run `npm --prefix frontend run dev:admin` for the local portal (API proxy defaults to localhost:8087). Build with `npm --prefix frontend run build:admin`; publish **only** `frontend/dist-admin` to the admin host. The usual store build produces `frontend/dist` without monitoring UI. CI builds both artifacts. They share branding and dependencies, but have separate entry points and browser sessions; the admin token is not copied from the store app.
+
+Production hosting must proxy `/api` on the admin origin over HTTPS to the intended Splynt backend, preserving Authorization and disabling response caching. The backend still enforces the singleton admin permission on every monitoring request; a separate hostname alone grants no access. The portal uses the existing backend/database, not a second copy of merchant data. DNS, HTTPS, hosting and the production proxy remain to be configured after approval. Never place backend secrets in frontend configuration.
 
 ## Access model
 
@@ -15,10 +21,10 @@ The requested email is in ignored `.env.platform.local`, not in Git. Do not put 
 1. From your own terminal in this repository, run `./scripts/set-platform-password.sh`. Enter a unique password twice at the hidden prompts. The command writes only a bcrypt hash into `.env.platform.local` with owner-only permissions. Bootstrap remains disabled.
 2. Review the email. An existing registered email is rejected; the bootstrap will not promote an existing store user. If this email already exists, select a different dedicated address or design an explicit reviewed migration.
 3. When deploying the approved pilot, put the email and password hash directly into the host's secret configuration as `SPLYNT_PLATFORM_BOOTSTRAP_EMAIL` and `SPLYNT_PLATFORM_BOOTSTRAP_PASSWORD_HASH`. Set `SPLYNT_PLATFORM_BOOTSTRAP_ENABLED=true` for provisioning. This asserts that the server operator has verified ownership of the admin identity. Normal email verification remains unchanged.
-4. Start against the intended persistent database with migration V25 applied. Provisioning creates a single account/grant transactionally. If the grant already exists, no additional admin is created. Check login at `/#/platform`.
+4. Start against the intended persistent database with migration V25 applied. Provisioning creates a single account/grant transactionally. If the grant already exists, no additional admin is created. Check login at the separate admin portal.
 5. Disable bootstrap and remove the bootstrap password hash from host configuration after success. The database retains only the normal password hash. The private local file is not automatically loaded by the app.
 
-For a local preview, use a persistent local database and explicitly supply the same private properties. Do not reset an existing preview database just to provision an account. The current earlier in-memory UI preview has migrations disabled and is not a valid environment for this SQL-backed admin feature. No account is silently provisioned into it.
+For a local preview, use a persistent local database and explicitly supply the same private properties. Do not reset an existing preview database just to provision an account. The local admin preview uses an ignored persistent H2 database under `.env.admin-preview` with migrations enabled. This is separate from the eventual Neon pilot database. Local provisioning does not create a production account.
 
 ## Metric definitions and limits
 

@@ -17,7 +17,6 @@ import type {
 interface AuthPageProps {
     onAuthenticated: (account: Account) => void;
     notice?: string;
-    platformOnly?: boolean;
     initialMode?: "login" | "register";
 }
 
@@ -33,8 +32,7 @@ const initialRegistration: RegisterRequest = {
 };
 
 export function AuthPage({
-    onAuthenticated,
-    platformOnly = false, initialMode = "login", notice
+    onAuthenticated, initialMode = "login", notice
 }: AuthPageProps) {
     const [mode, setMode] =
         useState<"login" | "register">(initialMode);
@@ -206,7 +204,7 @@ export function AuthPage({
                         <Brand />
                     </div>
 
-                    <div className="auth-tabs" style={platformOnly ? {gridTemplateColumns:"1fr"} : undefined}>
+                    <div className="auth-tabs">
                         <button
                             className={
                                 mode === "login"
@@ -219,7 +217,7 @@ export function AuthPage({
                             Sign in
                         </button>
 
-                        {!platformOnly && <button
+                        <button
                             className={
                                 mode === "register"
                                     ? "auth-tab active"
@@ -229,10 +227,9 @@ export function AuthPage({
                             onClick={() => changeMode("register")}
                         >
                             Create account
-                        </button>}
+                        </button>
                     </div>
 
-                    {platformOnly && <p className="detail-info">Platform administrator sign-in. This account is provisioned privately and is separate from store accounts.</p>}
                     {notice && <p className="message" role="status">{notice}</p>}
                     {error && (
                         <div className="message error-message">

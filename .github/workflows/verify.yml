@@ -31,6 +31,7 @@ jobs:
       - run: npm --prefix frontend test
       - run: npm --prefix frontend run lint
       - run: npm --prefix frontend run build
+      - run: npm --prefix frontend run build:admin
   postgres:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

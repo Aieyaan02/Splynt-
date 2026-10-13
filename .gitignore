@@ -43,3 +43,5 @@ build/
 *.pfx
 *.dump
 *.backup
+
+frontend/dist-admin/
