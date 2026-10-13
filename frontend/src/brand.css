@@ -158,4 +158,6 @@ th { font-weight:500; font-size:9px; background:#f6f8f1; }td { font-size:12px; p
 .hero-art .floating-note { position:relative; right:auto; bottom:auto; width:fit-content; margin:24px 0 0 auto; }
 .hero-art .art-caption { margin-top:24px; text-align:center; }
 .connection-logo { display:flex; align-items:center; justify-content:center; background:transparent; box-shadow:none; }
-.connection-logo .brand-symbol { width:63px; height:63px; }
+.connection-logo .brand-symbol { width:28px; height:28px; }
+.connection-logo { width:34px; height:34px; }
+.sample-store-logo { flex:none; }
