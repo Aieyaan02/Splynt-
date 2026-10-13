@@ -164,3 +164,22 @@ th { font-weight:500; font-size:9px; background:#f6f8f1; }td { font-size:12px; p
 .draft-list details { margin:16px 0; font-size:13px; line-height:1.7; overflow-wrap:anywhere; }
 .draft-list summary { cursor:pointer; }
 .draft-barcode { display:block; color:var(--muted); margin-top:5px; }
+.platform-admin { max-width:1500px; margin:auto; padding:28px; }
+.platform-header { display:flex; align-items:center; gap:24px; padding-bottom:24px; margin-bottom:32px; border-bottom:1px solid var(--border); }
+.platform-header small { display:block; color:var(--muted); margin-top:4px; }
+.platform-header button { margin-left:auto; }
+.platform-admin h1 { margin:8px 0; font-size:34px; letter-spacing:-1px; }
+.platform-health { margin:24px 0; padding:22px; border:1px solid var(--border); border-radius:12px; background:#f0f4e9; line-height:1.6; }
+.platform-health p { margin:0 0 8px; }
+.platform-tabs { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+.platform-filter { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.platform-filter input { width:18px; height:18px; }
+.platform-admin td { max-width:280px; overflow-wrap:anywhere; vertical-align:top; line-height:1.5; }
+.platform-admin td small { display:block; color:var(--muted); margin-top:6px; }
+@media(max-width:760px) { .platform-admin { padding:20px 14px; }.platform-header { flex-wrap:wrap; gap:16px; }.platform-admin h1 { font-size:28px; } }
+
+/* Keep the note and caption in separate flow rows at every viewport width. */
+.hero-art .floating-note { position:relative; right:auto; bottom:auto; width:fit-content; margin:24px 0 0 auto; }
+.hero-art .art-caption { margin-top:24px; text-align:center; }
+.connection-logo { display:flex; align-items:center; justify-content:center; background:transparent; box-shadow:none; }
+.connection-logo .brand-symbol { width:63px; height:63px; }

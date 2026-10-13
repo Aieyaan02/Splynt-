@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Brand } from "./Brand";
+import { Brand, BrandSymbol } from "./Brand";
 
 export function LandingPage({ signedIn, route }: { signedIn: boolean; route: string }) {
     const [busy, setBusy] = useState(false);
@@ -45,11 +45,11 @@ export function LandingPage({ signedIn, route }: { signedIn: boolean; route: str
                 <div className="hero-art" aria-label="Illustration of a Splynt inventory overview with sample data">
                     <div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" />
                     <div className="inventory-preview">
-                        <div className="preview-top"><span className="tiny-mark">s.</span><span>Maple & Main<small>Store overview · Sample data</small></span><span className="preview-dots">•••</span></div>
+                        <div className="preview-top"><BrandSymbol /><span>Grab n’ GO<small>Store overview · Sample data</small></span><span className="preview-dots">•••</span></div>
                         <div className="preview-heading"><span>Good morning, Alex.</span><strong>Let’s keep your shelves happy.</strong></div>
                         <div className="preview-stats"><div><span>Products</span><strong>128</strong></div><div><span>Need a restock</span><strong className="amber-text">3<span className="tiny-arrow"> ↗</span></strong></div></div>
                         <div className="preview-label">A little attention goes a long way <span>↓</span></div>
-                        {[['🍵', 'Matcha oat latte', 'Beverages', 4, 20], ['🫒', 'Extra virgin olive oil', 'Pantry', 2, 12], ['🍫', 'Dark chocolate 70%', 'Snacks', 6, 24]].map(([emoji, name, category, stock, target]) => <div className="preview-product" key={name}><span className="product-art">{emoji}</span><div><strong>{name}</strong><small>{category}</small></div><span className="preview-stock">{stock} left<small>Target {target}</small></span></div>)}
+                        {[['💧', 'Bottled water', 'Beverages', 4, 20], ['🫒', 'Extra virgin olive oil', 'Pantry', 2, 12], ['🍫', 'Dark chocolate 70%', 'Snacks', 6, 24]].map(([emoji, name, category, stock, target]) => <div className="preview-product" key={name}><span className="product-art">{emoji}</span><div><strong>{name}</strong><small>{category}</small></div><span className="preview-stock">{stock} left<small>Target {target}</small></span></div>)}
                         <div className="preview-bottom"><span className="status-dot" /> Inventory synced <span>✓</span></div>
                     </div>
                     <div className="floating-note"><span>↗</span><div><strong>Less guesswork.</strong><small>More room to grow.</small></div></div>
@@ -60,7 +60,7 @@ export function LandingPage({ signedIn, route }: { signedIn: boolean; route: str
             <section className="product-section" id="product">
                 <div className="section-intro"><span className="overline">YOUR NEXT MOVE, MADE CLEAR</span><h2>Know your stock.<br /><em>Find your focus.</em></h2><p>You have enough to keep track of. Splynt brings the important inventory details together, so you can get back to your customers.</p></div>
                 <div className="feature-grid">
-                    <article className="feature-card feature-green"><span className="feature-number">01 / CONNECT</span><div className="connection-graphic"><span className="connection-logo">s.</span><span className="connection-line">············</span><span className="clover-word">POS</span></div><h3>Your inventory, brought together.</h3><p>Authorize your POS system and bring its tracked inventory into your own workspace. Check the last successful refresh or request a new sync.</p></article>
+                    <article className="feature-card feature-green"><span className="feature-number">01 / CONNECT</span><div className="connection-graphic"><span className="connection-logo"><BrandSymbol /></span><span className="connection-line">············</span><span className="clover-word">POS</span></div><h3>Your inventory, brought together.</h3><p>Authorize your POS system and bring its tracked inventory into your own workspace. Check the last successful refresh or request a new sync.</p></article>
                     <article className="feature-card feature-cream"><span className="feature-number">02 / PRIORITIZE</span><div className="stock-graphic"><span>Oat milk <b>4 left</b></span><div><i /></div><small>Below your reorder level of 8</small></div><h3>Catch the low-stock moments.</h3><p>See products that need attention, with reorder quantities based on the stock targets you choose.</p></article>
                     <article className="feature-card feature-lilac"><span className="feature-number">03 / UNDERSTAND</span><div className="history-graphic"><span>↗ <b>Restock</b><em>+24</em></span><span>↙ <b>Sale</b><em>−2</em></span><span>⇄ <b>POS adjustment</b><em>−1</em></span></div><h3>Keep the bigger picture.</h3><p>Maintain a record of inventory changes and keep each store’s products in its own workspace.</p></article>
                 </div>
