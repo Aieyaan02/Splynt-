@@ -70,9 +70,14 @@ public class CloverOAuthCredential {
         return inventoryIssuesJson == null ? java.util.List.of() : java.util.List.of(new tools.jackson.databind.json.JsonMapper()
                 .readValue(inventoryIssuesJson, com.aieyaan.splynt.clover.dto.CloverImportIssue[].class));
     }
+    @Column(name = "last_sync_failed_at") private OffsetDateTime lastSyncFailedAt;
+    @Column(name = "last_sync_received_count") private Integer lastSyncReceivedCount;
+    @Column(name = "last_sync_imported_count") private Integer lastSyncImportedCount;
     public void recordInventoryReview(com.aieyaan.splynt.clover.dto.CloverSyncResponse result) {
         if (lastSyncedAt != null && lastSyncedAt.isAfter(result.synchronizedAt())) return;
         lastSyncedAt = result.synchronizedAt();
+        lastSyncReceivedCount = result.received();
+        lastSyncImportedCount = result.created() + result.updated();
         lastSyncError = result.issueCount() == 0 ? null : result.issueCount()
                 + " inventory items need review. Open import details for the affected items and next steps.";
         inventoryIssueCount = result.issueCount();
@@ -83,7 +88,7 @@ public class CloverOAuthCredential {
     public void assignStore(Long storeId) { this.storeId = java.util.Objects.requireNonNull(storeId); }
     public OffsetDateTime getLastSyncedAt() { return lastSyncedAt; }
     public String getLastSyncError() { return lastSyncError; }
-    public void markSyncFailed(String error) { lastSyncError = error; }
+    public void markSyncFailed(String error) { lastSyncError = error; lastSyncFailedAt = OffsetDateTime.now(); }
 
 
     @Column(

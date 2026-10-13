@@ -1,3 +1,5 @@
+import { Brand } from "./components/Brand";
+import { PlatformAdmin } from "./components/PlatformAdmin";
 import { RecoveryPage } from "./components/RecoveryPage";
 import { recoveryRoute } from "./lib/recoveryRoute";
 import { useEffect, useState } from "react";
@@ -40,7 +42,7 @@ export default function App() {
             setSessionError(false);
             setCheckingSession(false);
             setSessionExpired(true);
-            if (!recoveryRoute(window.location.hash.slice(1))) window.location.hash = "/login";
+            if (!recoveryRoute(window.location.hash.slice(1)) && window.location.hash !== "#/platform") window.location.hash = "/login";
         };
         window.addEventListener(SESSION_EXPIRED_EVENT, expired);
         return () => window.removeEventListener(SESSION_EXPIRED_EVENT, expired);
@@ -95,10 +97,7 @@ export default function App() {
     if (checkingSession) {
         return (
             <main className="loading-screen">
-                <div className="brand">
-                    <span className="brand-mark">S</span>
-                    <span>Splynt</span>
-                </div>
+                <Brand />
                 <p>Restoring your workspace…</p>
             </main>
         );
@@ -121,12 +120,15 @@ export default function App() {
         return (
             <AuthPage
                 key={route}
+                platformOnly={route === "/platform"}
                 notice={sessionExpired ? "Your session has expired. Sign in again to continue." : undefined}
                 initialMode={route === "/signup" ? "register" : "login"}
-                onAuthenticated={account => { setSessionExpired(false); setAccount(account); window.location.hash = "/app"; }}
+                onAuthenticated={account => { setSessionExpired(false); setAccount(account); window.location.hash = route === "/platform" ? "/platform" : "/app"; }}
             />
         );
     }
+
+    if (route === "/platform") return <PlatformAdmin key={account.id} onLogout={() => {setAccount(null);window.location.hash="/platform";}} />;
 
     if (route === "/inquiries") return <ContactInbox />;
 
