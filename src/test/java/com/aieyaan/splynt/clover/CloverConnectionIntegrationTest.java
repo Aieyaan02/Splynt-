@@ -61,6 +61,7 @@ class CloverConnectionIntegrationTest {
         registry.add("splynt.integrations.clover.encryption-key", () -> "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");
     }
     @AfterAll static void stopProvider() { provider.stop(0); }
+    @Autowired org.springframework.jdbc.core.JdbcTemplate db;
     @Autowired CloverConnectionService connections;
     @Autowired CloverOAuthStateService states;
     @Autowired CloverOAuthAttemptRepository attempts;
@@ -84,8 +85,15 @@ class CloverConnectionIntegrationTest {
         exchanges.set(0); refreshes.set(0);
     }
     @AfterEach void cleanup() {
-        attempts.deleteAll(); credentials.deleteAll(); memberships.deleteAll();
-        stores.deleteAll(); organizations.deleteAll(); users.deleteAll();
+        // PostgreSQL suites share a database: remove only this test's fixtures.
+        db.update("delete from clover_oauth_attempts where store_id in (select id from stores where organization_id=?)", organization.getId());
+        db.update("delete from clover_oauth_credentials where store_id in (select id from stores where organization_id=?)", organization.getId());
+        clearMembership();
+        db.update("delete from stores where organization_id=?", organization.getId());
+        organizations.deleteById(organization.getId()); users.deleteById(owner.getId());
+    }
+    void clearMembership() {
+        memberships.findByOrganizationIdAndUserIdAndActiveTrue(organization.getId(), owner.getId()).ifPresent(memberships::delete);
     }
     String begin(String binding) {
         return UriComponentsBuilder.fromUriString(connections.begin(store.getId(), owner.getId(), binding))
@@ -134,12 +142,12 @@ class CloverConnectionIntegrationTest {
     }
     @Test void rechecksAccessAtCallback() {
         String state = begin("browser");
-        memberships.deleteAll();
+        clearMembership();
         assertThrows(AccessDeniedException.class, () -> connections.complete(state, "browser", "codeA", "merchantA"));
         assertEquals(0, exchanges.get());
     }
     @Test void employeeCannotInitiateConnection() {
-        memberships.deleteAll();
+        clearMembership();
         memberships.saveAndFlush(new OrganizationMembership(organization, owner, MembershipRole.EMPLOYEE));
         assertThrows(AccessDeniedException.class, () -> begin("browser"));
     }
