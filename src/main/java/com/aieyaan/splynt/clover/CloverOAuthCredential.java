@@ -84,6 +84,15 @@ public class CloverOAuthCredential {
         inventoryIssuesJson = new tools.jackson.databind.json.JsonMapper().writeValueAsString(result.issues());
     }
 
+    @Column(name = "disconnected", nullable = false) private boolean disconnected;
+    public boolean isConnected() { return !disconnected; }
+    public void disconnect() {
+        disconnected = true;
+        accessToken = ""; refreshToken = "";
+        accessTokenExpiresAt = null; refreshTokenExpiresAt = null;
+        cancelSalesBackfill();
+    }
+
     public Long getStoreId() { return storeId; }
     public void assignStore(Long storeId) { this.storeId = java.util.Objects.requireNonNull(storeId); }
     public OffsetDateTime getLastSyncedAt() { return lastSyncedAt; }
@@ -140,6 +149,7 @@ public class CloverOAuthCredential {
                 merchantId,
                 "Clover merchant ID"
         );
+        this.disconnected = false;
         this.accessToken = requireText(
                 accessToken,
                 "Clover access token"
@@ -158,6 +168,7 @@ public class CloverOAuthCredential {
             OffsetDateTime accessTokenExpiresAt,
             OffsetDateTime refreshTokenExpiresAt) {
 
+        this.disconnected = false;
         this.accessToken = requireText(
                 accessToken,
                 "Clover access token"

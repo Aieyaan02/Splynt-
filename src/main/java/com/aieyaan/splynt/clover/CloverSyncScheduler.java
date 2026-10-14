@@ -17,6 +17,7 @@ public class CloverSyncScheduler {
             fixedDelayString = "${splynt.integrations.clover.sync-interval:60000}")
     public void synchronizeConnectedStores() {
         for (var connection : credentials.findAllByStoreIdIsNotNull()) {
+            if (!connection.isConnected()) continue;
             try { jobs.run(connection.getStoreId()); }
             catch (RuntimeException failure) {
                 org.slf4j.LoggerFactory.getLogger(getClass()).warn("Scheduled Clover sync failed for store {} ({})",

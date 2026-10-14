@@ -48,13 +48,13 @@ public class CloverTokenService {
         return token;
     }
     private CloverOAuthCredential credential(Long storeId) {
-        return credentials.findByStoreId(storeId)
+        return credentials.findByStoreId(storeId).filter(CloverOAuthCredential::isConnected)
                 .orElseThrow(() -> new IllegalStateException("Connect this store to Clover first"));
     }
     public String refreshAccessToken(Long storeId, String rejectedToken) {
         // Database lock coordinates rotating single-use refresh tokens across application instances.
         return transactions.execute(status -> {
-            var credential = credentials.findLockedByStoreId(storeId)
+            var credential = credentials.findLockedByStoreId(storeId).filter(CloverOAuthCredential::isConnected)
                     .orElseThrow(() -> new IllegalStateException("Connect this store to Clover first"));
             String current = cipher.decrypt(credential.getAccessToken());
             if (!current.equals(rejectedToken)) return current;

@@ -39,7 +39,9 @@ public class CloverConnectionService {
         this.redirectUri = redirectUri; this.authorizationUrl = authorizationUrl;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public String begin(Long storeId, Long userId, String browserBinding) {
+        stores.findLockedById(storeId).orElseThrow();
         if (!authorization.canManageUser(userId, storeId)) throw new AccessDeniedException("Only store owners and admins can connect Clover");
         if (clientId.isBlank() || clientSecret.isBlank() || redirectUri.isBlank())
             throw new IllegalStateException("Clover setup is not configured. Contact the Splynt administrator.");
@@ -51,6 +53,14 @@ public class CloverConnectionService {
     }
 
     public Long complete(String state, String binding, String code, String merchantId) {
+        Long storeId = states.storeForState(state);
+        return transactions.execute(tx -> {
+            stores.findLockedById(storeId).orElseThrow();
+            return completeLocked(state, binding, code, merchantId);
+        });
+    }
+
+    private Long completeLocked(String state, String binding, String code, String merchantId) {
         CloverOAuthAttempt attempt = states.consume(state, binding);
         if (!authorization.canManageUser(attempt.getUserId(), attempt.getStoreId()))
             throw new AccessDeniedException("Store access changed. Start the connection again.");
@@ -89,9 +99,17 @@ public class CloverConnectionService {
         return attempt.getStoreId();
     }
 
+    @org.springframework.transaction.annotation.Transactional
+    public void disconnect(Long storeId, Long userId) {
+        stores.findLockedById(storeId).orElseThrow();
+        if (!authorization.canManageUser(userId, storeId)) throw new AccessDeniedException("Only store owners and admins can disconnect the POS");
+        states.cancelForStore(storeId);
+        credentials.findLockedByStoreId(storeId).ifPresent(CloverOAuthCredential::disconnect);
+    }
+
     public ConnectionStatus status(Long storeId) {
         return credentials.findByStoreId(storeId)
-                .map(c -> new ConnectionStatus(true, c.getMerchantId(), c.getLastSyncedAt(), c.getLastSyncError(), c.getInventoryIssueCount(), c.getInventoryIssues(), c.getSalesCoverageStart(), c.getSalesBackfillTarget(), c.getSalesBackfillError()))
+                .map(c -> new ConnectionStatus(c.isConnected(), c.getMerchantId(), c.getLastSyncedAt(), c.getLastSyncError(), c.getInventoryIssueCount(), c.getInventoryIssues(), c.getSalesCoverageStart(), c.getSalesBackfillTarget(), c.getSalesBackfillError()))
                 .orElse(new ConnectionStatus(false, null, null, null, 0, java.util.List.of(), null, null, null));
     }
     public record ConnectionStatus(boolean connected, String merchantId, OffsetDateTime lastSyncedAt, String lastSyncError, int issueCount, java.util.List<com.aieyaan.splynt.clover.dto.CloverImportIssue> issues, OffsetDateTime salesCoverageStart, OffsetDateTime salesBackfillTarget, String salesBackfillError) {}

@@ -12,7 +12,7 @@ interface CloverAutoSyncProps {
 export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAutoSyncProps) {
     const [connection, setConnection] = useState<CloverConnection | null>(null);
     const [error, setError] = useState("");
-    const [busy, setBusy] = useState<"connect" | "sync" | null>(null);
+    const [busy, setBusy] = useState<"connect" | "sync" | "disconnect" | null>(null);
     const onRefresh = useRef(onSynchronized);
     useEffect(() => { onRefresh.current = onSynchronized; }, [onSynchronized]);
 
@@ -51,6 +51,17 @@ export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAut
         }
     }
 
+    async function disconnect() {
+        if (storeId === null || !window.confirm("Disconnect your POS? Future imports will stop. Existing inventory stays in Splynt and will no longer be current. This does not uninstall the app at your provider. Reconnect the same merchant to resume.")) return;
+        setBusy("disconnect"); setError("");
+        try {
+            await cloverApi.disconnect(storeId);
+            setConnection(await cloverApi.status(storeId));
+        } catch (failure) {
+            setError(failure instanceof Error ? failure.message : "Unable to disconnect your POS system.");
+        } finally { setBusy(null); }
+    }
+
     async function synchronize() {
         if (storeId === null) return;
         setBusy("sync"); setError("");
@@ -65,6 +76,7 @@ export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAut
 
     if (storeId === null) return null;
     return <div className="clover-connection" aria-live="polite">
+        {new URLSearchParams(window.location.search).get("pos") === "setup" && <p>Check that you have selected the correct store, then choose Connect your POS system to authorize inventory access.</p>}
         <p className="clover-sync-status">
             {busy === "sync" ? "Syncing…" : connection === null ? "Checking store connection…" : connection.connected
                 ? connection.lastSyncedAt
@@ -78,7 +90,9 @@ export function CloverAutoSync({ storeId, canManage, onSynchronized }: CloverAut
                 {busy === "connect" ? "Connecting…" : connection?.connected ? "Reconnect your POS system" : "Connect your POS system"}
             </button>
             {connection?.connected && <button type="button" className="button secondary compact" disabled={busy !== null} onClick={() => void synchronize()}>{busy === "sync" ? "Syncing…" : "Sync now"}</button>}
+            {connection?.connected && <button type="button" className="button secondary compact" disabled={busy !== null} onClick={() => void disconnect()}>{busy === "disconnect" ? "Disconnecting…" : "Disconnect POS"}</button>}
         </div>}
+        {connection && !connection.connected && connection.merchantId && <p>POS disconnected. Saved inventory is retained and no longer refreshes. Reconnect the same merchant to resume imports.</p>}
         {!canManage && connection && !connection.connected && <small>Ask your store owner or admin to connect your POS system.</small>}
         {connection && connection.issueCount > 0 && <details className="import-review"><summary>Review {connection.issueCount} inventory {connection.issueCount === 1 ? "item" : "items"}</summary>
             <p>From the last completed import{connection.lastSyncedAt ? ` on ${new Date(connection.lastSyncedAt).toLocaleString()}` : ""}. A failed refresh does not clear this list.</p>

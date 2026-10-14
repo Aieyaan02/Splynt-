@@ -28,6 +28,11 @@ public class CloverOAuthStateService {
         attempts.save(new CloverOAuthAttempt(hash(state), hash(browserBinding), storeId, userId, OffsetDateTime.now().plusMinutes(10)));
         return state;
     }
+    public Long storeForState(String state) {
+        return attempts.findById(hash(state)).orElseThrow(() -> new IllegalArgumentException("Connection session expired. Start again.")).getStoreId();
+    }
+    @Transactional
+    public void cancelForStore(Long storeId) { attempts.deleteByStoreId(storeId); }
     // Commit consumption before contacting Clover, even if token exchange later fails.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CloverOAuthAttempt consume(String state, String browserBinding) {

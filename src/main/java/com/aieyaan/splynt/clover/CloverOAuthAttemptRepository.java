@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 public interface CloverOAuthAttemptRepository extends JpaRepository<CloverOAuthAttempt, String> {
+    void deleteByStoreId(Long storeId);
     @Modifying
     @Query("delete from CloverOAuthAttempt a where a.expiresAt < :now")
     int deleteExpired(@Param("now") java.time.OffsetDateTime now);

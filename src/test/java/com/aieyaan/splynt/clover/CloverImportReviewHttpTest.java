@@ -51,6 +51,19 @@ class CloverImportReviewHttpTest {
                 issue ? List.of(new CloverImportIssue("item1", "Coffee", "ABC", "UNKNOWN_STOCK", "Check stock tracking in Clover.")) : List.of());
     }
     String path() { return "/api/stores/" + store.getId() + "/integrations/clover"; }
+    @Test void launchIgnoresUntrustedProviderAndRedirectParameters() throws Exception {
+        mvc.perform(get("/api/integrations/clover/launch").param("merchant_id", "outsider").param("redirect_uri", "https://example.com"))
+            .andExpect(status().isSeeOther()).andExpect(header().string("Location", "/?pos=setup#/app"));
+    }
+    @Test void ownerCanDisconnectButEmployeeCannot() throws Exception {
+        var membership = memberships.findByOrganizationIdAndUserIdAndActiveTrue(store.getOrganization().getId(), owner.getId()).orElseThrow();
+        membership.changeRole(MembershipRole.EMPLOYEE); memberships.flush();
+        mvc.perform(delete(path()).with(jwt().jwt(j -> j.subject(owner.getId().toString())))).andExpect(status().isForbidden());
+        assertTrue(credentials.findByStoreId(store.getId()).orElseThrow().isConnected());
+        membership.changeRole(MembershipRole.OWNER); memberships.flush();
+        mvc.perform(delete(path()).with(jwt().jwt(j -> j.subject(owner.getId().toString())))).andExpect(status().isNoContent());
+        assertFalse(credentials.findByStoreId(store.getId()).orElseThrow().isConnected());
+    }
     @Test void completedImportReviewPersistsAndApiDoesNotExposeCredentials() throws Exception {
         jobs.run(store.getId()); entityManager.flush(); entityManager.clear();
         mvc.perform(get(path()).with(jwt().jwt(j -> j.subject(owner.getId().toString()))))

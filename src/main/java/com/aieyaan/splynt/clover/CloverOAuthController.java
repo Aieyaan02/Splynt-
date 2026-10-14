@@ -17,6 +17,14 @@ public class CloverOAuthController {
 
     public CloverOAuthController(CloverConnectionService connections) { this.connections = connections; }
 
+    // Provider query parameters never authorize access or select a tenant.
+    @GetMapping("/api/integrations/clover/launch")
+    public ResponseEntity<Void> launch() {
+        return ResponseEntity.status(HttpStatus.SEE_OTHER)
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .location(URI.create("/?pos=setup#/app")).build();
+    }
+
     @PostMapping("/api/stores/{storeId}/integrations/clover/connect")
     @PreAuthorize("@storeAuthorizationService.canManage(authentication, #storeId)")
     public ResponseEntity<Map<String, String>> begin(@PathVariable Long storeId,
@@ -31,6 +39,13 @@ public class CloverOAuthController {
     @PreAuthorize("@storeAuthorizationService.canAccess(authentication, #storeId)")
     public CloverConnectionService.ConnectionStatus status(@PathVariable Long storeId) {
         return connections.status(storeId);
+    }
+
+    @DeleteMapping("/api/stores/{storeId}/integrations/clover")
+    @PreAuthorize("@storeAuthorizationService.canManage(authentication, #storeId)")
+    public ResponseEntity<Void> disconnect(@PathVariable Long storeId, Authentication authentication) {
+        connections.disconnect(storeId, Long.valueOf(authentication.getName()));
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping(CALLBACK)

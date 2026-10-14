@@ -24,7 +24,7 @@ public class CloverSyncJobs {
     public CloverSyncResponse run(Long storeId) {
         try {
             CloverSyncResponse result = sync.synchronize(storeId);
-            transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId).ifPresent(connection -> {
+            transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId).filter(CloverOAuthCredential::isConnected).ifPresent(connection -> {
                 connection.recordInventoryReview(result);
             }));
             if (salesEnabled) {
@@ -42,7 +42,7 @@ public class CloverSyncJobs {
             }
             return result;
         } catch (RuntimeException failure) {
-            transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId).ifPresent(connection ->
+            transactions.executeWithoutResult(tx -> credentials.findLockedByStoreId(storeId).filter(CloverOAuthCredential::isConnected).ifPresent(connection ->
                     connection.markSyncFailed(INVENTORY_FAILURE)));
             throw new IllegalStateException(INVENTORY_FAILURE, failure);
         }

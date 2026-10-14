@@ -71,7 +71,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/auth/recovery/status",
-                                "/api/integrations/clover/connect"
+                                "/api/integrations/clover/connect",
+                                "/api/integrations/clover/launch"
                         )
                         .permitAll()
 

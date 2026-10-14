@@ -91,6 +91,25 @@ class CloverConnectionIntegrationTest {
         return UriComponentsBuilder.fromUriString(connections.begin(store.getId(), owner.getId(), binding))
                 .build().getQueryParams().getFirst("state");
     }
+    @Test void disconnectClearsSecretsCancelsPendingAuthorizationAndPreservesMerchantBinding() {
+        connections.complete(begin("browser"), "browser", "codeA", "merchantA");
+        String pending = begin("pending");
+        connections.disconnect(store.getId(), owner.getId());
+        assertFalse(connections.status(store.getId()).connected());
+        var credential = credentials.findByStoreId(store.getId()).orElseThrow();
+        assertEquals("", credential.getAccessToken());
+        assertEquals("", credential.getRefreshToken());
+        assertThrows(IllegalStateException.class, () -> tokens.getAccessToken(store.getId()));
+        assertThrows(IllegalArgumentException.class, () -> connections.complete(pending, "pending", "codeA", "merchantA"));
+        assertThrows(IllegalArgumentException.class, () -> connections.complete(begin("other"), "other", "codeB", "merchantB"));
+        connections.complete(begin("again"), "again", "codeA", "merchantA");
+        assertTrue(connections.status(store.getId()).connected());
+    }
+    @Test void unrelatedUserCannotDisconnect() {
+        connections.complete(begin("browser"), "browser", "codeA", "merchantA");
+        assertThrows(AccessDeniedException.class, () -> connections.disconnect(store.getId(), -1L));
+        assertTrue(connections.status(store.getId()).connected());
+    }
     @Test void connectsOnlyVerifiedMerchantAndEncryptsTokens() {
         String state = begin("browser");
         assertEquals(store.getId(), connections.complete(state, "browser", "codeA", "merchantA"));

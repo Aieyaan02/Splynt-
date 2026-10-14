@@ -21,7 +21,7 @@ public class PlatformService {
     public record OrganizationRow(long id,String name,boolean active,OffsetDateTime registeredAt,long stores,long members) {}
     public record Page<T>(List<T> items,int page,int size,long total) {}
     private static final String NEEDS_ATTENTION="""
-        s.active=true and (c.id is null or c.last_synced_at is null or c.last_synced_at < ?
+        s.active=true and (c.id is null or c.disconnected=true or c.last_synced_at is null or c.last_synced_at < ?
         or c.last_sync_error is not null or (c.last_sync_failed_at is not null and (c.last_synced_at is null or c.last_sync_failed_at > c.last_synced_at)))
         """;
     public Overview overview() {
@@ -42,12 +42,12 @@ public class PlatformService {
         long total=count("select count(*)"+from+where,parameters.toArray());
         parameters.add(25);parameters.add(page*25);
         List<StoreRow> rows=db.query("""
-            select s.id,s.name,o.name as organization,s.active,c.id as connection_id,c.last_synced_at,c.last_sync_failed_at,
+            select s.id,s.name,o.name as organization,s.active,c.id as connection_id,c.disconnected,c.last_synced_at,c.last_sync_failed_at,
             c.last_sync_received_count,c.last_sync_imported_count,c.inventory_issue_count,
             case when c.last_sync_error is null then false else true end as has_warning,
             (select count(*) from products p where p.store_id=s.id and p.active=true and p.source='CLOVER') as product_count
             """+from+where+" order by s.id limit ? offset ?",(rs,n) -> {
-                boolean connected=rs.getObject("connection_id") != null;
+                boolean connected=rs.getObject("connection_id") != null && !rs.getBoolean("disconnected");
                 var success=time(rs,"last_synced_at"); var failure=time(rs,"last_sync_failed_at");
                 int issues=rs.getInt("inventory_issue_count"); boolean active=rs.getBoolean("active");
                 List<String> reasons=new ArrayList<>();

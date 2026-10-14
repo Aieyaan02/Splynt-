@@ -271,6 +271,7 @@ export interface CloverConnection {
 }
 
 export const cloverApi = {
+    disconnect(storeId: number): Promise<void> { return request(`/api/stores/${storeId}/integrations/clover`, { method: "DELETE" }); },
     requestHistory(storeId: number): Promise<void> { return request(`/api/stores/${storeId}/integrations/clover/history`, { method: "POST" }); },
     cancelHistory(storeId: number): Promise<void> { return request(`/api/stores/${storeId}/integrations/clover/history`, { method: "DELETE" }); },
     status(storeId: number): Promise<CloverConnection> {

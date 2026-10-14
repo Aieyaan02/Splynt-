@@ -119,7 +119,7 @@ export default function App() {
         return (
             <AuthPage
                 key={route}
-                notice={sessionExpired ? "Your session has expired. Sign in again to continue." : undefined}
+                notice={sessionExpired ? "Your session has expired. Sign in again to continue." : new URLSearchParams(window.location.search).get("pos") === "setup" ? "Sign in or create your store account, then select your store and choose Connect your POS system." : undefined}
                 initialMode={route === "/signup" ? "register" : "login"}
                 onAuthenticated={account => { setSessionExpired(false); setAccount(account); window.location.hash = "/app"; }}
             />
