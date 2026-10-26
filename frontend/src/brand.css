@@ -17,7 +17,8 @@ textarea { font:inherit; resize:vertical; }
 .site-header { max-width:1280px; margin:auto; height:100px; padding:0 48px; display:flex; justify-content:space-between; align-items:center; }
 .site-header nav { display:flex; align-items:center; gap:38px; font-size:14px; font-weight:600; }
 .site-header nav a:hover,.text-link:hover { color:#5b763c; }
-.nav-signin { border:1px solid #cbd3c4; border-radius:7px; padding:11px 17px; }
+.nav-signin { background:var(--primary); color:#fff; border:1px solid var(--primary); border-radius:7px; padding:11px 17px; transition:background .18s; }
+.nav-signin:hover { background:var(--primary-dark); border-color:var(--primary-dark); color:#fff; }
 .landing-hero { max-width:1280px; margin:auto; padding:62px 48px 90px; display:grid; grid-template-columns:1fr 1fr; gap:32px; align-items:center; }
 .pill-label { display:inline-flex; align-items:center; gap:9px; padding:8px 12px; border:1px solid #dce5cd; background:#f0f5e8; font-size:11px; font-weight:650; border-radius:30px; letter-spacing:.015em; }
 .pill-label i,.status-dot { display:inline-block; width:6px; height:6px; background:#6b8f4d; border-radius:50%; }
