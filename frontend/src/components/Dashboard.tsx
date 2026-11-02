@@ -1,3 +1,4 @@
+import { DeletionDialog } from "./DeletionDialog";
 import { PasswordDialog } from "./PasswordDialog";
 import { StoreSettingsDialog } from "./StoreSettingsDialog";
 import { ProductDetailsDialog } from "./ProductDetailsDialog";
@@ -69,6 +70,7 @@ export function Dashboard({
         [account]
     );
 
+    const [deletionDialogOpen, setDeletionDialogOpen] = useState(false);
     const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
     const [storeDialog, setStoreDialog] = useState<{ id: number | null } | null>(null);
 
@@ -279,6 +281,7 @@ export function Dashboard({
 
     return (
         <div className="dashboard-layout">
+            {deletionDialogOpen && <DeletionDialog account={account} onClose={() => setDeletionDialogOpen(false)} onChanged={onAccountChanged} onLogout={onLogout} />}
             {passwordDialogOpen && <PasswordDialog onClose={() => setPasswordDialogOpen(false)} onChanged={onLogout} />}
             <aside className="sidebar">
                 <div>
@@ -367,6 +370,7 @@ export function Dashboard({
                     <button className="navigation-item" type="button" onClick={() => setPasswordDialogOpen(true)}>
                         <span>⚙</span> Change password
                     </button>
+                    <button className="navigation-item" type="button" onClick={() => setDeletionDialogOpen(true)}>Delete account or workspace</button>
                     </nav>
                 </div>
 

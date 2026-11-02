@@ -204,4 +204,15 @@ class CloverConnectionIntegrationTest {
         String altered = encrypted.substring(0, encrypted.length() - 4) + "AAAA";
         assertThrows(IllegalStateException.class, () -> cipher.decrypt(altered));
     }
+
+    @Test void terminalRefreshFailureClearsCredentials() {
+        var c = new CloverOAuthCredential("revoked-" + UUID.randomUUID(), cipher.encrypt("expired"),
+                cipher.encrypt("rejected-refresh"), null, null);
+        c.assignStore(store.getId()); credentials.saveAndFlush(c);
+        assertThrows(IllegalStateException.class, () -> tokens.refreshAccessToken(store.getId(), "expired"));
+        var saved = credentials.findByStoreId(store.getId()).orElseThrow();
+        assertFalse(saved.isConnected());
+        assertEquals("", saved.getAccessToken());
+        assertEquals("", saved.getRefreshToken());
+    }
 }

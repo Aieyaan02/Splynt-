@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/public/inquiries",
+                                "/api/integrations/clover/webhook",
                                 "/api/auth/password-reset/request",
                                 "/api/auth/password-reset/confirm",
                                 "/api/auth/email-verification/request",

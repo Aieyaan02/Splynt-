@@ -53,20 +53,32 @@ public class CloverTokenService {
     }
     public String refreshAccessToken(Long storeId, String rejectedToken) {
         // Database lock coordinates rotating single-use refresh tokens across application instances.
-        return transactions.execute(status -> {
+        String refreshed = transactions.execute(status -> {
             var credential = credentials.findLockedByStoreId(storeId).filter(CloverOAuthCredential::isConnected)
                     .orElseThrow(() -> new IllegalStateException("Connect this store to Clover first"));
             String current = cipher.decrypt(credential.getAccessToken());
             if (!current.equals(rejectedToken)) return current;
-            JsonNode response = client.post().uri("/oauth/v2/refresh").contentType(MediaType.APPLICATION_JSON)
+            JsonNode response;
+            try {
+                response = client.post().uri("/oauth/v2/refresh").contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of("client_id", clientId, "refresh_token", cipher.decrypt(credential.getRefreshToken())))
                     .retrieve().body(JsonNode.class);
+            } catch (org.springframework.web.client.RestClientResponseException denied) {
+                if (denied.getStatusCode().value() != 401) throw denied;
+                credential.disconnect();
+                credential.markSyncFailed("POS authorization expired or was removed. Reconnect to resume updates.");
+                credentials.saveAndFlush(credential);
+                return null;
+            }
             String next = requiredText(response, "access_token");
             credential.rotateTokens(cipher.encrypt(next), cipher.encrypt(requiredText(response, "refresh_token")),
                     expiration(response, "access_token_expiration"), expiration(response, "refresh_token_expiration"));
             credentials.saveAndFlush(credential);
             return next;
         });
+        // Throw after the transaction commits so terminal authorization failure cannot restore old tokens.
+        if (refreshed == null) throw new IllegalStateException("Reconnect this store to the POS to resume updates");
+        return refreshed;
     }
     static String requiredText(JsonNode response, String field) {
         if (response == null || !response.path(field).isTextual() || response.path(field).asText().isBlank())

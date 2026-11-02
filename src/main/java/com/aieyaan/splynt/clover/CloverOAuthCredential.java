@@ -84,6 +84,10 @@ public class CloverOAuthCredential {
         inventoryIssuesJson = new tools.jackson.databind.json.JsonMapper().writeValueAsString(result.issues());
     }
 
+    @Column(name = "authorized_at") private OffsetDateTime authorizedAt;
+    public void markAuthorized() { authorizedAt = OffsetDateTime.now(); }
+    public OffsetDateTime getAuthorizedAt() { return authorizedAt; }
+
     @Column(name = "disconnected", nullable = false) private boolean disconnected;
     public boolean isConnected() { return !disconnected; }
     public void disconnect() {

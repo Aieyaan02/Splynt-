@@ -1,6 +1,6 @@
 # Splynt Clover submission readiness
 
-Audited 2026-10-13 against the local `pilot` source. **Not ready to submit.** No production dashboard, app permissions, live Clover consent flow, video, or public deployment was verified in this audit. This is a source review, not a penetration test or legal approval.
+Updated 2026-11-01 against the local `pilot` source. **Not ready to submit.** No production dashboard, app permissions, live Clover consent flow, video, or public deployment was verified in this audit. This is a source review, not a penetration test or legal approval.
 
 ## Release being reviewed
 
@@ -11,15 +11,15 @@ Private web app for one US merchant/location. Read-only inventory import, low/un
 | Area | Evidence | Status / next action |
 |---|---|---|
 | Developer verification | Owner reported submission pending | Owner confirms Clover approval; account approval is distinct from app approval |
-| Production private app | Only sandbox app previously shown | Create/configure production private web app after account approval; do not claim existing sandbox app is production-ready |
+| Production private app | Owner subsequently showed private production draft QWB6BKWXPPFGM | Confirm current account approval and configure the existing production draft; do not create a duplicate |
 | OAuth | CloverOAuthController, CloverConnectionService, CloverOAuthStateService; code exchange, browser-bound state, encrypted expiring tokens and refresh | Implemented; actual Clover browser consent/expiry/reconnect testing outstanding |
 | Clover-origin launch | GET /api/integrations/clover/launch redirects to store sign-in/onboarding; provider query parameters cannot select a tenant or grant access | Implemented entry point; merchant chooses a store and begins browser-bound OAuth. Actual Clover launch acceptance remains outstanding. Use launch, not callback, as Alternate Launch Path |
 | Minimal permissions | CloverInventoryClient reads items, item_stocks, categories, category items, merchant properties; connection verifies merchant identity | Request merchant/inventory READ only; confirm exact dashboard labels and denial behavior. Sales disabled |
 | Read-only behavior | Clover inventory calls use GET; OAuth token exchanges use POST | No purchase orders or Clover stock updates in pilot; demonstrate with real sandbox evidence |
 | Sync and recommendations | Paginated import and threshold/target calculation; tenant tests in existing suite | Automated evidence exists; compare representative catalog in Clover UI before recording |
-| Disconnect / uninstall | Owner/admin disconnect clears tokens, cancels pending OAuth, stops future inventory access and retains catalog plus merchant binding | Local disconnect implemented; provider-side uninstall/revocation handling remains a release blocker. Disconnect does not uninstall/revoke at Clover; retained inventory is no longer refreshed |
-| Data deletion / retention | No complete merchant-account deletion workflow found | BLOCKER: define and implement verified deletion, dependent records, backups and retention before publishing policy |
-| PostgreSQL release check | MFA timestamp mismatch fixed in 53e4610; application, PostgreSQL and container jobs passed in run 38365852207 | Verified for 53e4610; rerun checks after functional changes |
+| Disconnect / uninstall | Owner/admin disconnect clears tokens, cancels pending OAuth, stops future inventory access and retains catalog plus merchant binding | Authenticated uninstall callback and terminal refresh-401 credential cleanup implemented and locally tested; live callback acceptance remains outstanding. Disconnect does not uninstall/revoke at Clover; retained inventory is no longer refreshed |
+| Data deletion / retention | Password-confirmed workspace/account deletion implemented with dependent-record cleanup and tenant isolation tests | Live acceptance plus backup retention/restore and support-request retention still required before publishing policy |
+| PostgreSQL release check | MFA timestamp mismatch fixed in 53e4610; application, PostgreSQL and container jobs passed in run 38365852207 | Historical baseline; see docs/PILOT_REVIEW_2026-11-01.md for current local verification |
 | Admin security | MFA/throttling/audit code on pilot; local enrollment still unconfirmed | Finish owner enrollment and latest CI review; no claim of MFA activation based solely on code |
 | Support / recovery | Contact form saves requests; email delivery disabled | Confirm monitored channel and workable reviewer onboarding/recovery; no promise of email notifications |
 | Public privacy / terms | No published policy pages found | Owner identity, support contact, actual retention and hosting must be settled first |

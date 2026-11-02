@@ -91,6 +91,7 @@ public class CloverConnectionService {
             var credential = merchantConnection.orElseGet(() -> new CloverOAuthCredential(
                     merchantId, cipher.encrypt(access), cipher.encrypt(refresh), null, null));
             credential.assignStore(attempt.getStoreId());
+            credential.markAuthorized();
             credential.rotateTokens(cipher.encrypt(access), cipher.encrypt(refresh),
                     CloverTokenService.expiration(tokens, "access_token_expiration"),
                     CloverTokenService.expiration(tokens, "refresh_token_expiration"));

@@ -22,3 +22,12 @@ Flyway applies migrations on startup, and Hibernate validates the schema. Use an
 ## Acceptance before owner use
 
 Verify HTTPS, successful startup/migrations, correct callback and OAuth cookie handling, user/store isolation, expected memory use during a representative catalog sync, accurate imported quantities, useful errors, and a successful restart with credentials still decryptable. Verify the selected provider's free-tier and outbound email limitations. Keep the old deployment unchanged until the owner decides otherwise.
+
+## Lifecycle setup (2026-11-01)
+
+- Webhook endpoint: `/api/integrations/clover/webhook`. Configure Clover Apps events and `CLOVER_WEBHOOK_AUTH_CODE` from Clover's webhook settings (not the app secret). Missing/wrong authentication fails closed. Matching app uninstall events clear credentials and pending OAuth; delayed events older than the latest authorization are ignored. Confirm actual payload and delivery in sandbox before production.
+- Initial webhook verification: temporarily set `CLOVER_WEBHOOK_VERIFICATION_ENABLED=true` with the auth code unset, request Clover's verification code, read the single setup code from the private server log, and enter it in Clover. Then set the auth code and disable verification mode. The setup code alone never authorizes lifecycle changes.
+- A refresh-token HTTP 401 also disconnects locally and clears tokens. Temporary network failures retain credentials for retry.
+- Dashboard **Delete account or workspace** requires a password and exact confirmation. Only owners can delete workspaces. Workspace deletion removes stores, products, stock movements, sales, AI reports and Clover credentials/attempts; member accounts and unrelated workspaces remain. Account deletion requires no owned workspace and protects the platform operator account.
+- These actions do not delete Clover data or uninstall the Clover app. Public contact inquiries are handled separately through verified support requests because their sender addresses are not verified. Backups are outside the application database: the operator must set and disclose retention, record deletion requests, and reapply them before making any restored backup available.
+- Do not publish a privacy promise or retention period until the legal operator, monitored support address, backup retention and deletion handling are confirmed.

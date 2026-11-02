@@ -155,6 +155,12 @@ export const authApi = {
 };
 
 export const accountApi = {
+    deleteOrganization(id: number, password: string, confirmation: string): Promise<void> {
+        return request(`/api/me/organizations/${id}`, { method: "DELETE", body: JSON.stringify({ password, confirmation }) });
+    },
+    deleteAccount(password: string, confirmation: string): Promise<void> {
+        return request("/api/me", { method: "DELETE", body: JSON.stringify({ password, confirmation }) });
+    },
     changePassword(currentPassword: string, newPassword: string): Promise<void> {
         return request("/api/me/password", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) });
     },
