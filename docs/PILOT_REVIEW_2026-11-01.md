@@ -21,3 +21,9 @@ Dependency audit: runtime frontend dependencies report zero known vulnerabilitie
 - Known-pattern working-tree/history secret scans passed. No production secrets or store data were used for these tests.
 
 The technical candidate can proceed to a controlled hosted acceptance test. It has not been deployed, connected to a real store, or submitted to Clover by this work. Public launch remains gated on the live acceptance and operator/privacy/support/backup items above. The production admin frontend is a separate build and must be hosted/configured separately.
+
+## Local preview recheck — 2026-11-04
+
+Updated the frontend lockfile to the compatible Vite 8.3.5 dependency tree using npm audit fix. Full npm audit now reports zero known vulnerabilities (supersedes the earlier Vite advisory finding).
+
+Rechecked: 250 backend tests; 17 frontend tests; lint; merchant and admin production builds; known-pattern secret scan including history. All passed. Local persistent preview backend health returned HTTP 200, and unauthenticated account/platform requests returned HTTP 401. Existing local accounts were preserved. Store preview uses 127.0.0.1:5173 and admin uses 127.0.0.1:5174, both proxying to the local backend on port 8087. Browser visual verification was blocked by a saved browser permission, so user sign-in/visual acceptance remains pending. No hosted deployment or Clover submission occurred.
