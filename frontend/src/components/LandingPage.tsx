@@ -81,6 +81,6 @@ export function LandingPage({ signedIn, route }: { signedIn: boolean; route: str
                 </form>
             </section>
         </main>
-        <footer className="site-footer"><Brand /><p>A little more clarity for independent retail.</p><span>© {new Date().getFullYear()} Splynt</span><a href="#/contact">Get in touch ↗</a></footer>
+        <footer className="site-footer"><Brand /><p>A little more clarity for independent retail.</p><span>© {new Date().getFullYear()} Splynt</span><a href="/support.html">Support ↗</a><a href="/privacy.html">Privacy policy</a></footer>
     </div>;
 }

@@ -43,6 +43,9 @@ public class SecurityConfig {
                                 "/index.html",
                                 "/assets/**",
                                 "/favicon.svg",
+                                "/privacy.html",
+                                "/support.html",
+                                "/public-pages.css",
                                 "/icons.svg",
                                 "/error"
                         )
