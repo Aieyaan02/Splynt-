@@ -44,6 +44,7 @@ public class SecurityConfig {
                                 "/assets/**",
                                 "/favicon.svg",
                                 "/privacy.html",
+                                "/eula.html",
                                 "/support.html",
                                 "/public-pages.css",
                                 "/icons.svg",

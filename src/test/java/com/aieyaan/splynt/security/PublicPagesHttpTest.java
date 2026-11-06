@@ -20,6 +20,8 @@ class PublicPagesHttpTest {
                 .andExpect(content().string(containsString("Aieyaan Yeasin")));
         mvc.perform(get("/support.html")).andExpect(status().isOk())
                 .andExpect(content().string(containsString("mailto:Aieyaan.yeasin@gmail.com")));
+        mvc.perform(get("/eula.html")).andExpect(status().isOk())
+                .andExpect(content().string(containsString("End User License Agreement")));
         mvc.perform(get("/public-pages.css")).andExpect(status().isOk());
         mvc.perform(get("/favicon.svg")).andExpect(status().isOk());
         mvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
